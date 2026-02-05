@@ -129,13 +129,15 @@ class KlineData(BaseModel):
 
 class CSVFieldMapping(BaseModel):
     date_column: str = "Date"
+    time_column: Optional[str] = None
     symbol_column: str = "Symbol"
     side_column: str = "Side"
     quantity_column: str = "Quantity"
     price_column: str = "Price"
     commission_column: Optional[str] = None
     notes_column: Optional[str] = None
-    date_format: str = "%Y-%m-%d %H:%M:%S"
+    date_format: str = "%Y-%m-%d"
+    time_format: str = "%H:%M:%S"
 
 
 class CSVPreview(BaseModel):

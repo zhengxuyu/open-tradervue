@@ -56,13 +56,13 @@ export function Import() {
     setPreview(previewData)
     setMapping({
       date_column: previewData.detected_mapping.date_column,
+      time_column: previewData.detected_mapping.time_column || '',
       symbol_column: previewData.detected_mapping.symbol_column,
       side_column: previewData.detected_mapping.side_column,
       quantity_column: previewData.detected_mapping.quantity_column,
       price_column: previewData.detected_mapping.price_column,
       commission_column: previewData.detected_mapping.commission_column || '',
       notes_column: previewData.detected_mapping.notes_column || '',
-      date_format: previewData.detected_mapping.date_format,
     })
   }
 
@@ -140,7 +140,8 @@ export function Import() {
 
         <div className="grid grid-cols-2 gap-4">
           {[
-            { key: 'date_column', label: 'Date/Time Column', required: true },
+            { key: 'date_column', label: 'Date Column', required: true },
+            { key: 'time_column', label: 'Time Column', required: true },
             { key: 'symbol_column', label: 'Symbol Column', required: true },
             { key: 'side_column', label: 'Side (Buy/Sell) Column', required: true },
             { key: 'quantity_column', label: 'Quantity Column', required: true },
@@ -164,24 +165,6 @@ export function Import() {
               </select>
             </div>
           ))}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date Format
-            </label>
-            <select
-              value={mapping.date_format || ''}
-              onChange={(e) => setMapping({ ...mapping, date_format: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="%Y-%m-%d %H:%M:%S">YYYY-MM-DD HH:MM:SS</option>
-              <option value="%Y-%m-%d %H:%M">YYYY-MM-DD HH:MM</option>
-              <option value="%Y-%m-%d">YYYY-MM-DD</option>
-              <option value="%m/%d/%Y %H:%M:%S">MM/DD/YYYY HH:MM:SS</option>
-              <option value="%m/%d/%Y">MM/DD/YYYY</option>
-              <option value="%d/%m/%Y">DD/MM/YYYY</option>
-            </select>
-          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

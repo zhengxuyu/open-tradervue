@@ -3,6 +3,7 @@ import { Layout } from '@/components/Layout'
 import { Dashboard } from '@/pages/Dashboard'
 import { Trades } from '@/pages/Trades'
 import { PositionDetailPage } from '@/pages/PositionDetail'
+import { DailyPositionDetail } from '@/pages/DailyPositionDetail'
 import { Import } from '@/pages/Import'
 import { Calendar } from '@/pages/Calendar'
 import { Analysis } from '@/pages/Analysis'
@@ -16,6 +17,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/trades" element={<Trades />} />
+          <Route path="/positions/daily" element={<DailyPositionDetail />} />
           <Route path="/positions/:id" element={<PositionDetailPage />} />
           <Route path="/import" element={<Import />} />
           <Route path="/calendar" element={<Calendar />} />

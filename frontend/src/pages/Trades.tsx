@@ -1,10 +1,25 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { getPositions, deletePositions, type Position } from '@/services/api'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { Plus, Filter, Trash2 } from 'lucide-react'
-import { formatCurrency, formatDateTime, cn, getPnLColor } from '@/lib/utils'
+import { formatCurrency, cn, getPnLColor } from '@/lib/utils'
+
+// Group positions by symbol + date
+interface GroupedPosition {
+  key: string  // symbol_date
+  symbol: string
+  date: string
+  status: 'open' | 'closed' | 'mixed'
+  totalQuantity: number
+  avgEntryPrice: number
+  avgExitPrice: number | null
+  totalPnl: number | null
+  pnlPercent: number | null
+  positionIds: number[]
+  tradeCount: number
+}
 
 export function Trades() {
   const navigate = useNavigate()
@@ -76,20 +91,23 @@ export function Trades() {
   }, [filters])
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === positions.length) {
+    const allIds = groupedPositions.flatMap(g => g.positionIds)
+    if (selectedIds.size === allIds.length) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(positions.map(p => p.id)))
+      setSelectedIds(new Set(allIds))
     }
   }
 
-  const toggleSelect = (id: number, e: React.MouseEvent) => {
+  const toggleSelectGroup = (positionIds: number[], e: React.MouseEvent) => {
     e.stopPropagation()
     const newSelected = new Set(selectedIds)
-    if (newSelected.has(id)) {
-      newSelected.delete(id)
+    const allSelected = positionIds.every(id => newSelected.has(id))
+
+    if (allSelected) {
+      positionIds.forEach(id => newSelected.delete(id))
     } else {
-      newSelected.add(id)
+      positionIds.forEach(id => newSelected.add(id))
     }
     setSelectedIds(newSelected)
   }
@@ -114,9 +132,80 @@ export function Trades() {
     }
   }
 
-  const handleRowClick = (posId: number) => {
-    navigate(`/positions/${posId}`)
+  const handleRowClick = (group: GroupedPosition) => {
+    // Navigate to daily position detail with symbol and date
+    navigate(`/positions/daily?symbol=${group.symbol}&date=${group.date}`)
   }
+
+  // Group positions by symbol + date
+  const groupedPositions = useMemo(() => {
+    const groups = new Map<string, GroupedPosition>()
+
+    positions.forEach(pos => {
+      const date = pos.entry_time.split('T')[0]
+      const key = `${pos.symbol}_${date}`
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          symbol: pos.symbol,
+          date,
+          status: pos.status,
+          totalQuantity: 0,
+          avgEntryPrice: 0,
+          avgExitPrice: null,
+          totalPnl: null,
+          pnlPercent: null,
+          positionIds: [],
+          tradeCount: 0,
+        })
+      }
+
+      const group = groups.get(key)!
+      group.positionIds.push(pos.id)
+      group.totalQuantity += pos.quantity
+      group.tradeCount += 1
+
+      // Weighted average entry price
+      const prevTotal = group.avgEntryPrice * (group.totalQuantity - pos.quantity)
+      group.avgEntryPrice = (prevTotal + pos.entry_price * pos.quantity) / group.totalQuantity
+
+      // Status: if any open, show mixed; otherwise closed
+      if (pos.status === 'open' && group.status === 'closed') {
+        group.status = 'mixed'
+      } else if (pos.status === 'closed' && group.status === 'open') {
+        group.status = 'mixed'
+      }
+
+      // Sum P&L
+      if (pos.pnl !== null) {
+        group.totalPnl = (group.totalPnl || 0) + pos.pnl
+      }
+
+      // Exit price (weighted average for closed)
+      if (pos.exit_price !== null) {
+        if (group.avgExitPrice === null) {
+          group.avgExitPrice = pos.exit_price
+        } else {
+          // Simple average for now
+          const closedCount = group.positionIds.filter(id =>
+            positions.find(p => p.id === id)?.exit_price !== null
+          ).length
+          group.avgExitPrice = ((group.avgExitPrice * (closedCount - 1)) + pos.exit_price) / closedCount
+        }
+      }
+    })
+
+    // Calculate P&L percent for each group
+    groups.forEach(group => {
+      if (group.totalPnl !== null && group.avgEntryPrice > 0) {
+        const totalCost = group.avgEntryPrice * group.totalQuantity
+        group.pnlPercent = (group.totalPnl / totalCost) * 100
+      }
+    })
+
+    return Array.from(groups.values()).sort((a, b) => b.date.localeCompare(a.date))
+  }, [positions])
 
   const closedCount = positions.filter(p => p.status === 'closed').length
   const openCount = positions.filter(p => p.status === 'open').length
@@ -255,7 +344,7 @@ export function Trades() {
         <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-12 text-gray-500">Loading...</div>
-          ) : positions.length === 0 ? (
+          ) : groupedPositions.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               {filters.status === 'open'
                 ? 'No open positions'
@@ -275,6 +364,9 @@ export function Trades() {
                       />
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Symbol
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -284,10 +376,10 @@ export function Trades() {
                       Qty
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Entry
+                      Avg Entry
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Exit
+                      Avg Exit
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       P&L
@@ -295,91 +387,90 @@ export function Trades() {
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       %
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Entry Time
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Exit Time
-                    </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Days
+                      Trades
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {positions.map((pos) => (
-                    <tr
-                      key={pos.id}
-                      ref={pos.id === highlightedId ? highlightedRowRef : null}
-                      className={cn(
-                        'hover:bg-gray-50 cursor-pointer transition-colors duration-300',
-                        pos.id === highlightedId && 'bg-yellow-100 hover:bg-yellow-100',
-                        selectedIds.has(pos.id) && 'bg-blue-50'
-                      )}
-                      onClick={() => handleRowClick(pos.id)}
-                    >
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(pos.id)}
-                          onChange={() => {}}
-                          onClick={(e) => toggleSelect(pos.id, e)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Link
-                          to={`/positions/${pos.id}`}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {pos.symbol}
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={cn(
-                            'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                            pos.status === 'open'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
-                          )}
-                        >
-                          {pos.status === 'open' ? 'OPEN' : 'CLOSED'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                        {pos.quantity}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                        {formatCurrency(pos.entry_price)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                        {pos.exit_price ? formatCurrency(pos.exit_price) : '-'}
-                      </td>
-                      <td className={cn(
-                        'px-6 py-4 whitespace-nowrap text-sm font-medium text-right',
-                        pos.pnl !== null ? getPnLColor(pos.pnl) : 'text-gray-400'
-                      )}>
-                        {pos.pnl !== null ? formatCurrency(pos.pnl) : '-'}
-                      </td>
-                      <td className={cn(
-                        'px-6 py-4 whitespace-nowrap text-sm font-medium text-right',
-                        pos.pnl_percent !== null ? getPnLColor(pos.pnl_percent) : 'text-gray-400'
-                      )}>
-                        {pos.pnl_percent !== null ? `${pos.pnl_percent >= 0 ? '+' : ''}${pos.pnl_percent.toFixed(2)}%` : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDateTime(pos.entry_time)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {pos.exit_time ? formatDateTime(pos.exit_time) : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                        {pos.holding_days !== null ? pos.holding_days : '-'}
-                      </td>
-                    </tr>
-                  ))}
+                  {groupedPositions.map((group) => {
+                    const isHighlighted = group.positionIds.includes(highlightedId || 0)
+                    const isSelected = group.positionIds.every(id => selectedIds.has(id))
+                    const isPartialSelected = group.positionIds.some(id => selectedIds.has(id)) && !isSelected
+
+                    return (
+                      <tr
+                        key={group.key}
+                        ref={isHighlighted ? highlightedRowRef : null}
+                        className={cn(
+                          'hover:bg-gray-50 cursor-pointer transition-colors duration-300',
+                          isHighlighted && 'bg-yellow-100 hover:bg-yellow-100',
+                          isSelected && 'bg-blue-50',
+                          isPartialSelected && 'bg-blue-50/50'
+                        )}
+                        onClick={() => handleRowClick(group)}
+                      >
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            ref={el => {
+                              if (el) el.indeterminate = isPartialSelected
+                            }}
+                            onChange={() => {}}
+                            onClick={(e) => toggleSelectGroup(group.positionIds, e)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {group.date}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-medium text-blue-600">
+                            {group.symbol}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={cn(
+                              'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                              group.status === 'open'
+                                ? 'bg-blue-100 text-blue-800'
+                                : group.status === 'mixed'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-800'
+                            )}
+                          >
+                            {group.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {group.totalQuantity}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {formatCurrency(group.avgEntryPrice)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {group.avgExitPrice ? formatCurrency(group.avgExitPrice) : '-'}
+                        </td>
+                        <td className={cn(
+                          'px-6 py-4 whitespace-nowrap text-sm font-medium text-right',
+                          group.totalPnl !== null ? getPnLColor(group.totalPnl) : 'text-gray-400'
+                        )}>
+                          {group.totalPnl !== null ? formatCurrency(group.totalPnl) : '-'}
+                        </td>
+                        <td className={cn(
+                          'px-6 py-4 whitespace-nowrap text-sm font-medium text-right',
+                          group.pnlPercent !== null ? getPnLColor(group.pnlPercent) : 'text-gray-400'
+                        )}>
+                          {group.pnlPercent !== null ? `${group.pnlPercent >= 0 ? '+' : ''}${group.pnlPercent.toFixed(2)}%` : '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
+                          {group.tradeCount}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

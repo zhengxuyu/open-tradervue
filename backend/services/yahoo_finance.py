@@ -31,7 +31,8 @@ class YahooFinanceService:
         """Synchronous data fetch - will be run in executor."""
         try:
             ticker = yf.Ticker(symbol)
-            df = ticker.history(period=period, interval=interval)
+            # prepost=True includes pre-market and after-hours data
+            df = ticker.history(period=period, interval=interval, prepost=True)
 
             if df.empty:
                 return []
@@ -129,7 +130,7 @@ class YahooFinanceService:
         klines = await loop.run_in_executor(
             None,
             partial(self._fetch_data_sync, symbol, period, "1d")
-        )
+        )  # prepost is already included in _fetch_data_sync
 
         if klines:
             self._cache[cache_key] = klines

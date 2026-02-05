@@ -115,13 +115,13 @@ export interface CSVPreview {
   sample_rows: Record<string, any>[]
   detected_mapping: {
     date_column: string
+    time_column: string | null
     symbol_column: string
     side_column: string
     quantity_column: string
     price_column: string
     commission_column: string | null
     notes_column: string | null
-    date_format: string
   }
   total_rows: number
 }

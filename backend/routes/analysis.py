@@ -109,18 +109,24 @@ async def delete_positions(
 ):
     """Delete multiple positions and all their associated trades."""
     service = AnalysisService()
-    total_trades_deleted = 0
+
+    # First, collect ALL trade IDs from all positions before deleting any
+    # This is important because position IDs are calculated dynamically
+    # and will change after trades are deleted
+    all_trade_ids = set()
 
     for position_id in position_ids:
         detail = await service.get_position_detail(db, position_id)
         if detail:
             trade_ids = detail["entry_trade_ids"] + detail["exit_trade_ids"]
-            if trade_ids:
-                await db.execute(delete(Trade).where(Trade.id.in_(trade_ids)))
-                total_trades_deleted += len(trade_ids)
+            all_trade_ids.update(trade_ids)
 
-    await db.commit()
-    return {"message": f"Deleted {len(position_ids)} positions and {total_trades_deleted} associated trades"}
+    # Now delete all trades at once
+    if all_trade_ids:
+        await db.execute(delete(Trade).where(Trade.id.in_(list(all_trade_ids))))
+        await db.commit()
+
+    return {"message": f"Deleted {len(position_ids)} positions and {len(all_trade_ids)} associated trades"}
 
 
 @router.get("/analysis/summary", response_model=AnalysisSummary)

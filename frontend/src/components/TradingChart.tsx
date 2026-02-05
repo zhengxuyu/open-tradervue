@@ -401,7 +401,7 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
         <div className="px-4 py-3 border-t border-gray-700">
           <p className="text-xs font-medium text-gray-400 mb-2">Trade Executions:</p>
           <div className="flex flex-wrap gap-2">
-            {trades.map(trade => (
+            {[...trades].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()).map(trade => (
               <span
                 key={trade.id}
                 className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${

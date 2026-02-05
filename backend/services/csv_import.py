@@ -24,7 +24,8 @@ class CSVImportService:
     ]
 
     COLUMN_ALIASES = {
-        "date": ["date", "datetime", "time", "executed_at", "trade_date", "exec_time"],
+        "date": ["date", "trade_date", "exec_date"],
+        "time": ["time", "exec_time", "trade_time"],
         "symbol": ["symbol", "ticker", "stock", "instrument", "security"],
         "side": ["side", "action", "type", "buy_sell", "direction", "transaction"],
         "quantity": ["quantity", "qty", "shares", "amount", "size", "volume"],
@@ -82,17 +83,19 @@ class CSVImportService:
         columns = df.columns.tolist()
 
         date_col = self._detect_column(columns, "date") or columns[0]
-        date_format = self._detect_date_format(df[date_col]) if date_col in columns else "%Y-%m-%d %H:%M:%S"
+        time_col = self._detect_column(columns, "time")
 
         detected_mapping = CSVFieldMapping(
             date_column=date_col,
+            time_column=time_col,
             symbol_column=self._detect_column(columns, "symbol") or "Symbol",
             side_column=self._detect_column(columns, "side") or "Side",
             quantity_column=self._detect_column(columns, "quantity") or "Quantity",
             price_column=self._detect_column(columns, "price") or "Price",
             commission_column=self._detect_column(columns, "commission"),
             notes_column=self._detect_column(columns, "notes"),
-            date_format=date_format
+            date_format="%Y-%m-%d",
+            time_format="%H:%M:%S"
         )
 
         sample_rows = df.head(5).to_dict(orient="records")
@@ -123,18 +126,29 @@ class CSVImportService:
 
         for idx, row in df.iterrows():
             try:
+                # Handle separate date and time columns
                 date_str = str(row[mapping.date_column]).strip()
+
+                if mapping.time_column and mapping.time_column in row:
+                    time_str = str(row[mapping.time_column]).strip()
+                    datetime_str = f"{date_str} {time_str}"
+                    datetime_format = f"{mapping.date_format} {mapping.time_format}"
+                else:
+                    datetime_str = date_str
+                    datetime_format = mapping.date_format
+
                 try:
-                    executed_at = datetime.strptime(date_str, mapping.date_format)
+                    executed_at = datetime.strptime(datetime_str, datetime_format)
                 except ValueError:
+                    # Try common formats as fallback
                     for fmt in self.COMMON_DATE_FORMATS:
                         try:
-                            executed_at = datetime.strptime(date_str, fmt)
+                            executed_at = datetime.strptime(datetime_str, fmt)
                             break
                         except ValueError:
                             continue
                     else:
-                        raise ValueError(f"Unable to parse date: {date_str}")
+                        raise ValueError(f"Unable to parse date/time: {datetime_str}")
 
                 executed_at = self._convert_timezone(executed_at, timezone)
 
