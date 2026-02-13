@@ -1,6 +1,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 from .database import init_db
 from .routes import trades_router, analysis_router, calendar_router, market_data_router, journal_router

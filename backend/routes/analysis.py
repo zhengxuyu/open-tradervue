@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete
+from sqlalchemy import select, delete
 from datetime import datetime
 from typing import Optional
 
@@ -8,9 +8,12 @@ from ..database import get_db
 from ..models.trade import Trade
 from ..schemas import (
     AnalysisSummary, SymbolAnalysis, DateAnalysis,
-    PositionResponse, PositionDetailResponse, TradeResponse
+    PositionResponse, PositionDetailResponse, TradeResponse,
+    AdvancedStatistics
 )
 from ..services.analysis import AnalysisService
+from ..services.statistics import StatisticsService
+from ..services.market_data import market_data_service
 
 router = APIRouter(prefix="/api", tags=["analysis"])
 
@@ -157,3 +160,53 @@ async def get_analysis_by_date(
 ):
     service = AnalysisService()
     return await service.get_by_date(db, start_date, end_date)
+
+
+@router.get("/analysis/advanced", response_model=AdvancedStatistics)
+async def get_advanced_statistics(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    symbol: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get advanced trading statistics with breakdowns by symbol, hour, day, holding time, etc."""
+    service = StatisticsService()
+    return await service.get_advanced_statistics(db, start_date, end_date, symbol)
+
+
+@router.post("/market-data/fetch")
+async def fetch_market_data(
+    symbols: list[str] = Query(None, description="Symbols to fetch. If empty, fetches for all traded symbols."),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch and store market data from Alpha Vantage for the specified symbols."""
+    # If no symbols provided, get all unique symbols from trades
+    if not symbols:
+        result = await db.execute(select(Trade.symbol).distinct())
+        symbols = [row[0] for row in result.fetchall()]
+
+    if not symbols:
+        return {"message": "No symbols to fetch", "results": {}}
+
+    results = await market_data_service.fetch_market_data_for_symbols(db, symbols)
+    total_records = sum(results.values())
+
+    return {
+        "message": f"Fetched market data for {len(symbols)} symbols ({total_records} total records)",
+        "results": results
+    }
+
+
+@router.post("/market-data/fetch/{symbol}")
+async def fetch_market_data_for_symbol(
+    symbol: str,
+    force_refresh: bool = Query(False, description="Force refresh even if data exists"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Fetch and store market data for a specific symbol."""
+    count = await market_data_service.fetch_and_store_market_data(db, symbol, force_refresh)
+    return {
+        "symbol": symbol.upper(),
+        "records_stored": count,
+        "message": f"Stored {count} records for {symbol.upper()}"
+    }

@@ -7,6 +7,7 @@ import { DailyPositionDetail } from '@/pages/DailyPositionDetail'
 import { Import } from '@/pages/Import'
 import { Calendar } from '@/pages/Calendar'
 import { Analysis } from '@/pages/Analysis'
+import { Statistics } from '@/pages/Statistics'
 import { Charts } from '@/pages/Charts'
 import { Journal } from '@/pages/Journal'
 
@@ -22,6 +23,7 @@ function App() {
           <Route path="/import" element={<Import />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/analysis" element={<Analysis />} />
+          <Route path="/statistics" element={<Statistics />} />
           <Route path="/charts" element={<Charts />} />
           <Route path="/journal" element={<Journal />} />
         </Routes>

@@ -8,6 +8,7 @@ import {
   BarChart3,
   LineChart,
   BookOpen,
+  PieChart,
 } from 'lucide-react'
 
 const navigation = [
@@ -17,6 +18,7 @@ const navigation = [
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Journal', href: '/journal', icon: BookOpen },
   { name: 'Analysis', href: '/analysis', icon: BarChart3 },
+  { name: 'Statistics', href: '/statistics', icon: PieChart },
   { name: 'Charts', href: '/charts', icon: LineChart },
 ]
 

@@ -110,6 +110,169 @@ export interface KlineData {
   volume: number
 }
 
+// Advanced Statistics Types
+export interface HourlyStats {
+  hour: number
+  trade_count: number
+  total_pnl: number
+  win_count: number
+  loss_count: number
+  win_rate: number
+  avg_pnl: number
+}
+
+export interface DayOfWeekStats {
+  day_of_week: number
+  day_name: string
+  trade_count: number
+  total_pnl: number
+  win_count: number
+  loss_count: number
+  win_rate: number
+  avg_pnl: number
+}
+
+export interface SymbolDetailedStats {
+  symbol: string
+  trade_count: number
+  total_pnl: number
+  total_commission: number
+  net_pnl: number
+  win_count: number
+  loss_count: number
+  win_rate: number
+  avg_pnl: number
+  avg_win: number
+  avg_loss: number
+  profit_factor: number
+  best_trade: number
+  worst_trade: number
+  total_volume: number
+  avg_holding_minutes: number | null
+}
+
+export interface HoldingTimeStats {
+  range_label: string
+  trade_count: number
+  total_pnl: number
+  win_count: number
+  loss_count: number
+  win_rate: number
+  avg_pnl: number
+}
+
+export interface PnlRangeStats {
+  range_label: string
+  trade_count: number
+  percentage: number
+}
+
+export interface MarketConditionStats {
+  range_label: string
+  trade_count: number
+  total_pnl: number
+  win_count: number
+  loss_count: number
+  win_rate: number
+  avg_pnl: number
+  percentage: number
+}
+
+export interface RiskRewardAnalysis {
+  range_label: string
+  trade_count: number
+  win_count: number
+  loss_count: number
+  win_rate: number
+  total_pnl: number
+  avg_win: number
+  avg_loss: number
+  risk_reward_ratio: number
+  expectancy: number
+  total_r: number
+}
+
+export interface DailyPnlData {
+  date: string
+  pnl: number
+  cumulative_pnl: number
+  trade_count: number
+  win_count: number
+  loss_count: number
+  win_rate: number
+  volume: number
+}
+
+export interface StreakData {
+  current_streak: number
+  max_win_streak: number
+  max_loss_streak: number
+  current_streak_pnl: number
+}
+
+export interface DetailedSummary {
+  total_gain_loss: number
+  largest_gain: number
+  largest_loss: number
+  avg_daily_pnl: number
+  avg_daily_volume: number
+  trading_days: number
+  avg_per_share_pnl: number
+  avg_trade_pnl: number
+  avg_winning_trade: number
+  avg_losing_trade: number
+  total_trades: number
+  winning_trades: number
+  winning_pct: number
+  losing_trades: number
+  losing_pct: number
+  scratch_trades: number
+  scratch_pct: number
+  avg_hold_time_all: number
+  avg_hold_time_scratch: number
+  avg_hold_time_winning: number
+  avg_hold_time_losing: number
+  max_consecutive_wins: number
+  max_consecutive_losses: number
+  pnl_std_dev: number
+  sqn: number | null
+  prob_random: number | null
+  kelly_pct: number | null
+  k_ratio: number | null
+  profit_factor: number
+  total_commissions: number
+  total_fees: number
+}
+
+export interface AdvancedStatistics {
+  summary: AnalysisSummary
+  detailed_summary: DetailedSummary
+  by_symbol: SymbolDetailedStats[]
+  by_hour: HourlyStats[]
+  by_day_of_week: DayOfWeekStats[]
+  by_holding_time: HoldingTimeStats[]
+  pnl_distribution: PnlRangeStats[]
+  daily_pnl: DailyPnlData[]
+  streak_data: StreakData
+  insights: string[]
+  // Market condition analysis
+  by_volume: MarketConditionStats[]
+  by_relative_volume: MarketConditionStats[]
+  by_prior_day_volume: MarketConditionStats[]
+  by_opening_gap: MarketConditionStats[]
+  by_day_movement: MarketConditionStats[]
+  by_day_type: MarketConditionStats[]
+  by_atr: MarketConditionStats[]
+  by_entry_pct_atr: MarketConditionStats[]
+  by_relative_volatility: MarketConditionStats[]
+  by_price_vs_sma50: MarketConditionStats[]
+  // Entry condition analysis with R:R
+  by_entry_price: RiskRewardAnalysis[]
+  by_gap_percent: RiskRewardAnalysis[]
+  by_relative_volume_5d: RiskRewardAnalysis[]
+  by_float: RiskRewardAnalysis[]
+}
+
 export interface CSVPreview {
   columns: string[]
   sample_rows: Record<string, any>[]
@@ -246,6 +409,38 @@ export const getAnalysisByDate = async (params?: {
   end_date?: string
 }): Promise<DateAnalysis[]> => {
   const { data } = await api.get('/analysis/by-date', { params })
+  return data
+}
+
+export const getAdvancedStatistics = async (params?: {
+  start_date?: string
+  end_date?: string
+  symbol?: string
+}): Promise<AdvancedStatistics> => {
+  const { data } = await api.get('/analysis/advanced', { params })
+  return data
+}
+
+export const fetchMarketData = async (symbols?: string[]): Promise<{
+  message: string
+  results: Record<string, number>
+}> => {
+  const params = symbols ? { symbols } : {}
+  const { data } = await api.post('/market-data/fetch', null, { params })
+  return data
+}
+
+export const fetchMarketDataForSymbol = async (
+  symbol: string,
+  forceRefresh: boolean = false
+): Promise<{
+  symbol: string
+  records_stored: number
+  message: string
+}> => {
+  const { data } = await api.post(`/market-data/fetch/${symbol}`, null, {
+    params: { force_refresh: forceRefresh }
+  })
   return data
 }
 
