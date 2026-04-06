@@ -800,7 +800,7 @@ class StatisticsService:
 
     def _calculate_daily_pnl(self, positions) -> list[DailyPnlData]:
         """Calculate daily P&L data for charts."""
-        daily_data = defaultdict(lambda: {"pnl": 0, "trades": 0, "wins": 0, "losses": 0, "volume": 0})
+        daily_data = defaultdict(lambda: {"pnl": 0, "trades": 0, "wins": 0, "losses": 0, "volume": 0, "gross_profit": 0, "gross_loss": 0})
 
         for p in positions:
             if p.position.exit_time and p.position.pnl is not None:
@@ -810,19 +810,27 @@ class StatisticsService:
                 daily_data[date]["volume"] += p.position.quantity
                 if p.position.pnl > 0:
                     daily_data[date]["wins"] += 1
+                    daily_data[date]["gross_profit"] += p.position.pnl
                 elif p.position.pnl < 0:
                     daily_data[date]["losses"] += 1
+                    daily_data[date]["gross_loss"] += abs(p.position.pnl)
 
         # Sort by date and calculate cumulative
         sorted_dates = sorted(daily_data.keys())
         results = []
         cumulative = 0
+        cum_gross_profit = 0
+        cum_gross_loss = 0
 
         for date in sorted_dates:
             data = daily_data[date]
             cumulative += data["pnl"]
+            cum_gross_profit += data["gross_profit"]
+            cum_gross_loss += data["gross_loss"]
             total_trades = data["trades"]
             win_rate = round(data["wins"] / total_trades * 100, 2) if total_trades > 0 else 0
+
+            cum_pf = round(cum_gross_profit / cum_gross_loss, 2) if cum_gross_loss > 0 else None
 
             results.append(DailyPnlData(
                 date=date,
@@ -832,7 +840,10 @@ class StatisticsService:
                 win_count=data["wins"],
                 loss_count=data["losses"],
                 win_rate=win_rate,
-                volume=data["volume"]
+                volume=data["volume"],
+                gross_profit=round(data["gross_profit"], 2),
+                gross_loss=round(data["gross_loss"], 2),
+                cumulative_profit_factor=cum_pf
             ))
 
         return results

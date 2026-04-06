@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, ComposedChart, Area
+  ResponsiveContainer, Cell, ComposedChart, Area, LineChart, Line, ReferenceLine
 } from 'recharts'
 
 type TabType = 'overview' | 'charts' | 'symbols' | 'time' | 'market' | 'entry' | 'insights'

@@ -211,6 +211,9 @@ class DailyPnlData(BaseModel):
     loss_count: int
     win_rate: float
     volume: float
+    gross_profit: float = 0
+    gross_loss: float = 0
+    cumulative_profit_factor: Optional[float] = None
 
 
 class StreakData(BaseModel):
