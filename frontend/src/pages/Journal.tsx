@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/Card'
-import { Button } from '@/components/Button'
+import { TopAppBar } from '@/components/TopAppBar'
+import { Icon } from '@/components/Icon'
 import { getJournal, updateJournal, getJournals, type JournalWithTrades, type Journal as JournalType } from '@/services/api'
 import { formatCurrency, cn, getPnLColor } from '@/lib/utils'
-import { ChevronLeft, ChevronRight, Save, Book, AlertTriangle, Lightbulb, Target } from 'lucide-react'
 
 const MOODS = [
-  { value: 'great', label: 'Great', color: 'bg-green-100 text-green-800' },
-  { value: 'good', label: 'Good', color: 'bg-blue-100 text-blue-800' },
-  { value: 'neutral', label: 'Neutral', color: 'bg-gray-100 text-gray-800' },
-  { value: 'bad', label: 'Bad', color: 'bg-orange-100 text-orange-800' },
-  { value: 'terrible', label: 'Terrible', color: 'bg-red-100 text-red-800' },
+  { value: 'great', emoji: '\u{1F929}', label: 'Great' },
+  { value: 'good', emoji: '\u{1F60A}', label: 'Good' },
+  { value: 'neutral', emoji: '\u{1F610}', label: 'Neutral' },
+  { value: 'bad', emoji: '\u{1F614}', label: 'Bad' },
+  { value: 'terrible', emoji: '\u{1F621}', label: 'Terrible' },
 ]
 
 export function Journal() {
@@ -23,6 +22,7 @@ export function Journal() {
   const [recentJournals, setRecentJournals] = useState<JournalType[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
   // Form state
   const [content, setContent] = useState('')
@@ -30,6 +30,11 @@ export function Journal() {
   const [lessons, setLessons] = useState('')
   const [mistakes, setMistakes] = useState('')
   const [improvements, setImprovements] = useState('')
+
+  // Collapsible sections
+  const [lessonsOpen, setLessonsOpen] = useState(true)
+  const [mistakesOpen, setMistakesOpen] = useState(true)
+  const [improvementsOpen, setImprovementsOpen] = useState(true)
 
   const fetchJournal = async (targetDate: string) => {
     setLoading(true)
@@ -43,7 +48,6 @@ export function Journal() {
       setImprovements(data.improvements || '')
     } catch (error) {
       console.error('Failed to fetch journal:', error)
-      // Reset to empty state if no journal exists
       setJournal(null)
       setContent('')
       setMood('')
@@ -58,7 +62,7 @@ export function Journal() {
   const fetchRecentJournals = async () => {
     try {
       const data = await getJournals()
-      setRecentJournals(data.slice(0, 10))
+      setRecentJournals(data)
     } catch (error) {
       console.error('Failed to fetch recent journals:', error)
     }
@@ -83,6 +87,7 @@ export function Journal() {
         mistakes,
         improvements,
       })
+      setLastSaved(new Date())
       await fetchJournal(date)
       await fetchRecentJournals()
     } catch (error) {
@@ -93,305 +98,327 @@ export function Journal() {
     }
   }
 
-  const navigateDay = (direction: number) => {
-    const currentDate = new Date(date)
-    currentDate.setDate(currentDate.getDate() + direction)
-    setDate(currentDate.toISOString().split('T')[0])
+  const handleNewEntry = () => {
+    const today = new Date().toISOString().split('T')[0]
+    setDate(today)
   }
 
-  const hasChanges = journal && (
-    content !== (journal.content || '') ||
-    mood !== (journal.mood || '') ||
-    lessons !== (journal.lessons || '') ||
-    mistakes !== (journal.mistakes || '') ||
-    improvements !== (journal.improvements || '')
-  )
+  const hasChanges = journal
+    ? (content !== (journal.content || '') ||
+       mood !== (journal.mood || '') ||
+       lessons !== (journal.lessons || '') ||
+       mistakes !== (journal.mistakes || '') ||
+       improvements !== (journal.improvements || ''))
+    : (content || mood || lessons || mistakes || improvements)
+
+  const pnl = journal?.pnl_summary ?? 0
+  const tradeCount = journal?.trade_count ?? 0
+  const winningTrades = journal?.positions?.filter(p => (p.pnl ?? 0) > 0).length ?? 0
+  const winRate = tradeCount > 0 ? (winningTrades / tradeCount) * 100 : 0
+
+  const getMoodEmoji = (moodValue: string | null | undefined) => {
+    if (!moodValue) return null
+    return MOODS.find(m => m.value === moodValue)?.emoji ?? null
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Trading Journal</h1>
-          <p className="text-gray-500 mt-1">Review and reflect on your trading day</p>
-        </div>
-        <Button
-          onClick={handleSave}
-          disabled={saving || !hasChanges}
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
-      </div>
+    <div className="flex flex-col h-full">
+      <TopAppBar title="Journal" />
 
-      {/* Date Navigation */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigateDay(-1)}>
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <div className="text-center">
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="text-lg font-semibold text-gray-900 bg-transparent border-none focus:outline-none focus:ring-0 text-center cursor-pointer"
-              />
-              <p className="text-sm text-gray-500">
-                {new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left panel - History */}
+        <div className="w-[30%] border-r border-[#1b2025] bg-surface-container-low flex flex-col">
+          <div className="p-4 flex items-center justify-between border-b border-[#1b2025]">
+            <span className="font-label text-xs font-bold text-outline uppercase tracking-wider">History</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleNewEntry}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-label font-bold hover:bg-primary/20 transition-colors"
+              >
+                <Icon name="add" className="text-sm" />
+                New Entry
+              </button>
+              <button className="p-1.5 rounded-lg hover:bg-surface-container transition-colors text-outline">
+                <Icon name="filter_list" className="text-lg" />
+              </button>
             </div>
-            <Button variant="ghost" onClick={() => navigateDay(1)}>
-              <ChevronRight className="h-5 w-5" />
-            </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Daily Summary */}
-          {loading ? (
-            <Card>
-              <CardContent className="py-8 text-center text-gray-500">
-                Loading...
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Book className="h-5 w-5" />
-                    Daily Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-500">P&L</p>
-                      <p className={cn(
-                        'text-2xl font-bold',
-                        journal?.pnl_summary !== null && journal?.pnl_summary !== undefined
-                          ? getPnLColor(journal.pnl_summary)
-                          : 'text-gray-400'
-                      )}>
-                        {journal?.pnl_summary !== null && journal?.pnl_summary !== undefined
-                          ? formatCurrency(journal.pnl_summary)
-                          : '$0.00'}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-500">Trades Closed</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {journal?.trade_count || 0}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Mood Selection */}
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      How was your trading today?
-                    </label>
-                    <div className="flex gap-2 flex-wrap">
-                      {MOODS.map((m) => (
-                        <button
-                          key={m.value}
-                          onClick={() => setMood(m.value)}
-                          className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                            mood === m.value
-                              ? m.color + ' ring-2 ring-offset-2 ring-gray-400'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          )}
-                        >
-                          {m.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Journal Content */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Journal Notes
-                    </label>
-                    <textarea
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder="Write about your trading day... What happened? How did you feel? What were the market conditions?"
-                      className="w-full h-40 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Reflection Sections */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4 text-yellow-500" />
-                      Lessons Learned
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <textarea
-                      value={lessons}
-                      onChange={(e) => setLessons(e.target.value)}
-                      placeholder="What did you learn today?"
-                      className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-red-500" />
-                      Mistakes Made
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <textarea
-                      value={mistakes}
-                      onChange={(e) => setMistakes(e.target.value)}
-                      placeholder="What mistakes did you make?"
-                      className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Target className="h-4 w-4 text-green-500" />
-                      Improvements
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <textarea
-                      value={improvements}
-                      onChange={(e) => setImprovements(e.target.value)}
-                      placeholder="How can you improve?"
-                      className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Trades List */}
-              {journal && journal.positions.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Closed Positions</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Entry</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Exit</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">P&L</th>
-                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">%</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {journal.positions.map((pos) => (
-                            <tr key={pos.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-3">
-                                <Link
-                                  to={`/positions/${pos.id}`}
-                                  className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                                >
-                                  {pos.symbol}
-                                </Link>
-                              </td>
-                              <td className="px-4 py-3 text-sm text-right">{pos.quantity}</td>
-                              <td className="px-4 py-3 text-sm text-right">{formatCurrency(pos.entry_price)}</td>
-                              <td className="px-4 py-3 text-sm text-right">{pos.exit_price ? formatCurrency(pos.exit_price) : '-'}</td>
-                              <td className={cn('px-4 py-3 text-sm font-medium text-right', pos.pnl !== null ? getPnLColor(pos.pnl) : '')}>
-                                {pos.pnl !== null ? formatCurrency(pos.pnl) : '-'}
-                              </td>
-                              <td className={cn('px-4 py-3 text-sm font-medium text-right', pos.pnl_percent !== null ? getPnLColor(pos.pnl_percent) : '')}>
-                                {pos.pnl_percent !== null ? `${pos.pnl_percent >= 0 ? '+' : ''}${pos.pnl_percent.toFixed(2)}%` : '-'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Sidebar - Recent Journals */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Recent Journals</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {recentJournals.length === 0 ? (
-                <p className="px-4 py-8 text-center text-sm text-gray-500">
-                  No journal entries yet
-                </p>
-              ) : (
-                <div className="divide-y divide-gray-200">
-                  {recentJournals.map((j) => (
+          <div className="flex-1 overflow-auto">
+            {recentJournals.length === 0 ? (
+              <p className="px-4 py-8 text-center text-xs font-label text-outline">
+                No journal entries yet
+              </p>
+            ) : (
+              <div>
+                {recentJournals.map((j) => {
+                  const isActive = j.date === date
+                  const emoji = getMoodEmoji(j.mood)
+                  return (
                     <button
                       key={j.id}
                       onClick={() => setDate(j.date)}
                       className={cn(
-                        'w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors',
-                        j.date === date && 'bg-blue-50'
+                        'w-full px-4 py-3.5 text-left transition-colors border-l-4',
+                        isActive
+                          ? 'bg-surface-container-high border-primary'
+                          : 'hover:bg-surface-container border-transparent'
                       )}
                     >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{j.date}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {j.trade_count || 0} trades
+                      <div className="flex items-center gap-3">
+                        {emoji && (
+                          <span className="text-2xl">{emoji}</span>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-label text-xs font-bold text-on-surface">
+                            {new Date(j.date + 'T12:00:00').toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
                           </p>
-                        </div>
-                        <div className="text-right">
-                          <p className={cn(
-                            'text-sm font-medium',
-                            j.pnl_summary !== null ? getPnLColor(j.pnl_summary) : 'text-gray-400'
-                          )}>
-                            {j.pnl_summary !== null ? formatCurrency(j.pnl_summary) : '-'}
-                          </p>
-                          {j.mood && (
+                          <div className="flex items-center gap-2 mt-0.5">
                             <span className={cn(
-                              'text-xs px-2 py-0.5 rounded-full',
-                              MOODS.find(m => m.value === j.mood)?.color || 'bg-gray-100'
+                              'text-xs font-label font-bold tabular-nums',
+                              j.pnl_summary !== null ? getPnLColor(j.pnl_summary) : 'text-outline-variant'
                             )}>
-                              {MOODS.find(m => m.value === j.mood)?.label || j.mood}
+                              {j.pnl_summary !== null ? formatCurrency(j.pnl_summary) : '-'}
                             </span>
-                          )}
+                            <span className="text-[10px] font-label text-outline">
+                              {j.trade_count || 0} trades
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      {j.content && (
-                        <p className="text-xs text-gray-500 mt-1 truncate">
-                          {j.content}
-                        </p>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right panel - Editor */}
+        <div className="w-[70%] bg-surface flex flex-col overflow-auto">
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center text-outline">
+              <Icon name="progress_activity" className="text-3xl animate-spin" />
+            </div>
+          ) : (
+            <div className="p-6 space-y-6 max-w-4xl">
+              {/* Date header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-headline text-lg font-semibold text-on-surface">
+                    {new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </h3>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="text-xs text-outline bg-transparent border-none focus:outline-none cursor-pointer mt-0.5"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  {lastSaved && (
+                    <span className="text-xs text-slate-500">
+                      Saved {lastSaved.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                  <button
+                    onClick={handleSave}
+                    disabled={saving || !hasChanges}
+                    className={cn(
+                      'px-5 py-2 rounded-lg font-label text-sm font-bold transition-all',
+                      hasChanges
+                        ? 'bg-gradient-to-br from-primary to-primary-container text-on-primary-container hover:brightness-110'
+                        : 'bg-surface-container text-outline cursor-not-allowed'
+                    )}
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats header */}
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+                  <p className="text-[10px] font-label font-bold text-outline uppercase tracking-wider mb-1">Daily P&L</p>
+                  <p className={cn('font-label text-xl font-extrabold tabular-nums', getPnLColor(pnl))}>
+                    {formatCurrency(pnl)}
+                  </p>
+                </div>
+                <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+                  <p className="text-[10px] font-label font-bold text-outline uppercase tracking-wider mb-1">Trades</p>
+                  <p className="font-label text-xl font-extrabold text-on-surface">{tradeCount}</p>
+                </div>
+                <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+                  <p className="text-[10px] font-label font-bold text-outline uppercase tracking-wider mb-1">Win Rate</p>
+                  <p className="font-label text-xl font-extrabold text-on-surface">{winRate.toFixed(0)}%</p>
+                </div>
+                <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+                  <p className="text-[10px] font-label font-bold text-outline uppercase tracking-wider mb-1">Positions</p>
+                  <p className="font-label text-xl font-extrabold text-on-surface">{journal?.positions?.length ?? 0}</p>
+                </div>
+              </div>
+
+              {/* Mood selector */}
+              <div>
+                <label className="block text-[10px] font-label font-bold text-outline uppercase tracking-wider mb-3">
+                  How was your trading today?
+                </label>
+                <div className="flex gap-2">
+                  {MOODS.map((m) => (
+                    <button
+                      key={m.value}
+                      onClick={() => setMood(m.value)}
+                      className={cn(
+                        'flex flex-col items-center gap-1 px-4 py-3 rounded-xl transition-all',
+                        mood === m.value
+                          ? 'bg-surface-container-high ring-1 ring-primary'
+                          : 'hover:bg-surface-container'
                       )}
+                    >
+                      <span className="text-2xl">{m.emoji}</span>
+                      <span className="text-[10px] font-label font-bold text-outline">{m.label}</span>
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Content textarea */}
+              <div>
+                <label className="block text-[10px] font-label font-bold text-outline uppercase tracking-wider mb-3">
+                  Journal Notes
+                </label>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Write about your trading day... What happened? How did you feel? What were the market conditions?"
+                  className="w-full h-40 px-0 py-3 bg-transparent border-0 border-b border-outline-variant focus:border-primary text-lg text-on-surface placeholder:text-outline-variant/50 focus:outline-none resize-y transition-colors"
+                />
+              </div>
+
+              {/* Collapsible sections */}
+              <CollapsibleSection
+                title="Lessons Learned"
+                icon="lightbulb"
+                borderColor="border-secondary/30"
+                open={lessonsOpen}
+                onToggle={() => setLessonsOpen(!lessonsOpen)}
+              >
+                <textarea
+                  value={lessons}
+                  onChange={(e) => setLessons(e.target.value)}
+                  placeholder="What did you learn today?"
+                  className="w-full h-28 px-0 py-2 bg-transparent border-0 border-b border-outline-variant/30 focus:border-secondary/50 text-sm text-on-surface placeholder:text-outline-variant/50 focus:outline-none resize-y transition-colors"
+                />
+              </CollapsibleSection>
+
+              <CollapsibleSection
+                title="Mistakes Made"
+                icon="warning"
+                borderColor="border-tertiary/30"
+                open={mistakesOpen}
+                onToggle={() => setMistakesOpen(!mistakesOpen)}
+              >
+                <textarea
+                  value={mistakes}
+                  onChange={(e) => setMistakes(e.target.value)}
+                  placeholder="What mistakes did you make?"
+                  className="w-full h-28 px-0 py-2 bg-transparent border-0 border-b border-outline-variant/30 focus:border-tertiary/50 text-sm text-on-surface placeholder:text-outline-variant/50 focus:outline-none resize-y transition-colors"
+                />
+              </CollapsibleSection>
+
+              <CollapsibleSection
+                title="Improvements"
+                icon="trending_up"
+                borderColor="border-primary/30"
+                open={improvementsOpen}
+                onToggle={() => setImprovementsOpen(!improvementsOpen)}
+              >
+                <textarea
+                  value={improvements}
+                  onChange={(e) => setImprovements(e.target.value)}
+                  placeholder="How can you improve?"
+                  className="w-full h-28 px-0 py-2 bg-transparent border-0 border-b border-outline-variant/30 focus:border-primary/50 text-sm text-on-surface placeholder:text-outline-variant/50 focus:outline-none resize-y transition-colors"
+                />
+              </CollapsibleSection>
+
+              {/* Positions list */}
+              {journal && journal.positions.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] font-label font-bold text-outline uppercase tracking-wider mb-3">
+                    Closed Positions
+                  </h4>
+                  <div className="space-y-2">
+                    {journal.positions.map((pos) => (
+                      <Link
+                        key={pos.id}
+                        to={`/positions/${pos.id}`}
+                        className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low border border-outline-variant/10 hover:border-outline-variant/20 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-label text-sm font-bold text-on-surface">{pos.symbol}</span>
+                          <span className="text-[10px] font-label text-outline">{pos.quantity} shares</span>
+                        </div>
+                        <div className="text-right">
+                          <span className={cn('font-label text-sm font-bold tabular-nums', getPnLColor(pos.pnl ?? 0))}>
+                            {formatCurrency(pos.pnl ?? 0)}
+                          </span>
+                          <span className={cn('ml-2 text-xs font-label tabular-nums', getPnLColor(pos.pnl_percent ?? 0))}>
+                            {(pos.pnl_percent ?? 0) >= 0 ? '+' : ''}{(pos.pnl_percent ?? 0).toFixed(2)}%
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function CollapsibleSection({
+  title,
+  icon,
+  borderColor,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string
+  icon: string
+  borderColor: string
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className={cn('border-l-2 pl-4', borderColor)}>
+      <button
+        onClick={onToggle}
+        className="flex items-center gap-2 w-full text-left mb-2"
+      >
+        <Icon name={icon} className="text-base text-outline" />
+        <span className="text-xs font-label font-bold text-on-surface-variant uppercase tracking-wider flex-1">
+          {title}
+        </span>
+        <Icon
+          name={open ? 'expand_less' : 'expand_more'}
+          className="text-base text-outline"
+        />
+      </button>
+      {open && children}
     </div>
   )
 }
