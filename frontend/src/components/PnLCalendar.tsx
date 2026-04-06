@@ -1,57 +1,19 @@
-import { useState, useEffect } from 'react'
-import { getCalendarDaily, getCalendarMonthly, type CalendarDay, type MonthSummary } from '@/services/api'
-import { formatCurrency, cn, getPnLColor } from '@/lib/utils'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { Button } from './Button'
+import { type CalendarDay } from '@/services/api'
+import { formatCurrency, cn } from '@/lib/utils'
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-]
-
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 interface PnLCalendarProps {
-  onDayClick?: (date: string, pnl: number) => void
+  year: number
+  month: number
+  calendarData: CalendarDay[]
+  onDayClick?: (date: string) => void
+  loading?: boolean
 }
 
-export function PnLCalendar({ onDayClick }: PnLCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [calendarData, setCalendarData] = useState<CalendarDay[]>([])
-  const [monthSummary, setMonthSummary] = useState<MonthSummary | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  const year = currentDate.getFullYear()
-  const month = currentDate.getMonth() + 1
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true)
-      try {
-        const [daily, monthly] = await Promise.all([
-          getCalendarDaily(year, month),
-          getCalendarMonthly(year)
-        ])
-        setCalendarData(daily)
-        setMonthSummary(monthly.find(m => m.month === month) || null)
-      } catch (error) {
-        console.error('Failed to fetch calendar data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [year, month])
-
-  const prevMonth = () => {
-    setCurrentDate(new Date(year, month - 2, 1))
-  }
-
-  const nextMonth = () => {
-    setCurrentDate(new Date(year, month, 1))
-  }
-
-  const firstDayOfMonth = new Date(year, month - 1, 1).getDay()
+export function PnLCalendar({ year, month, calendarData, onDayClick, loading }: PnLCalendarProps) {
+  // Monday-based: 0=Mon, 6=Sun
+  const firstDayOfMonth = (new Date(year, month - 1, 1).getDay() + 6) % 7
   const daysInMonth = new Date(year, month, 0).getDate()
 
   const getPnLForDay = (day: number): CalendarDay | undefined => {
@@ -59,94 +21,96 @@ export function PnLCalendar({ onDayClick }: PnLCalendarProps) {
     return calendarData.find(d => d.date === dateStr)
   }
 
+  // Find max absolute PnL for opacity scaling
+  const maxPnL = calendarData.reduce((max, d) => Math.max(max, Math.abs(d.pnl)), 0) || 1
+
+  const getOpacity = (pnl: number): number => {
+    const ratio = Math.abs(pnl) / maxPnL
+    return Math.max(0.08, Math.min(0.6, ratio * 0.6))
+  }
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-7 gap-px bg-outline-variant/10 border border-outline-variant/20 overflow-hidden rounded-xl">
+        {WEEKDAYS.map(day => (
+          <div key={day} className="bg-surface-container-low py-3 text-center text-[10px] font-label font-bold text-outline uppercase tracking-[0.2em]">
+            {day}
+          </div>
+        ))}
+        {Array.from({ length: 35 }).map((_, i) => (
+          <div key={i} className="h-32 bg-surface-container animate-pulse" />
+        ))}
+      </div>
+    )
+  }
+
   const renderDay = (day: number) => {
     const dayData = getPnLForDay(day)
     const hasTrades = dayData && dayData.trade_count > 0
     const pnl = dayData?.pnl || 0
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
+    const isProfit = pnl > 0
+    const isLoss = pnl < 0
 
     return (
       <button
         key={day}
-        onClick={() => {
-          if (hasTrades && onDayClick) {
-            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-            onDayClick(dateStr, pnl)
-          }
-        }}
+        onClick={() => onDayClick?.(dateStr)}
         className={cn(
-          'aspect-square p-2 rounded-lg text-sm transition-colors',
+          'h-32 p-3 flex flex-col justify-between cursor-pointer hover:brightness-110 transition-all text-left',
           hasTrades
             ? cn(
-                'cursor-pointer hover:ring-2 hover:ring-blue-400',
-                pnl > 0 ? 'bg-green-100 hover:bg-green-200' :
-                pnl < 0 ? 'bg-red-100 hover:bg-red-200' :
-                'bg-gray-100 hover:bg-gray-200'
+                isProfit && 'border-l-2 border-secondary',
+                isLoss && 'border-l-2 border-tertiary',
               )
-            : 'text-gray-400'
+            : 'bg-surface-container opacity-50'
         )}
+        style={hasTrades ? {
+          backgroundColor: isProfit
+            ? `oklch(var(--color-secondary-container) / ${getOpacity(pnl)})`
+            : isLoss
+            ? `oklch(var(--color-tertiary-container) / ${getOpacity(pnl)})`
+            : undefined,
+        } : undefined}
       >
-        <div className="font-medium">{day}</div>
-        {hasTrades && (
-          <div className={cn('text-xs font-semibold mt-1', getPnLColor(pnl))}>
-            {pnl >= 0 ? '+' : ''}{pnl.toFixed(0)}
-          </div>
-        )}
+        <div className="flex justify-between items-start">
+          <span className="font-label text-xs font-bold text-on-surface-variant">{day}</span>
+          {hasTrades && (
+            <span className="text-[10px] font-label text-outline">
+              {dayData.trade_count} {dayData.trade_count === 1 ? 'trade' : 'trades'}
+            </span>
+          )}
+        </div>
+        <div className="text-right">
+          <span className={cn(
+            'font-label text-lg font-extrabold tabular-nums',
+            hasTrades
+              ? isProfit ? 'text-secondary' : isLoss ? 'text-tertiary' : 'text-outline'
+              : 'text-outline-variant'
+          )}>
+            {hasTrades ? formatCurrency(pnl) : '$0.00'}
+          </span>
+        </div>
       </button>
     )
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" size="sm" onClick={prevMonth}>
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <h2 className="text-xl font-semibold text-gray-900">
-          {MONTHS[month - 1]} {year}
-        </h2>
-        <Button variant="ghost" size="sm" onClick={nextMonth}>
-          <ChevronRight className="h-5 w-5" />
-        </Button>
-      </div>
-
-      {monthSummary && (
-        <div className="grid grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-          <div>
-            <p className="text-sm text-gray-500">Monthly P&L</p>
-            <p className={cn('text-lg font-semibold', getPnLColor(monthSummary.total_pnl))}>
-              {formatCurrency(monthSummary.total_pnl)}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Trading Days</p>
-            <p className="text-lg font-semibold text-gray-900">{monthSummary.trading_days}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Winning Days</p>
-            <p className="text-lg font-semibold text-green-600">{monthSummary.winning_days}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Losing Days</p>
-            <p className="text-lg font-semibold text-red-600">{monthSummary.losing_days}</p>
-          </div>
+    <div className="grid grid-cols-7 gap-px bg-outline-variant/10 border border-outline-variant/20 overflow-hidden rounded-xl">
+      {WEEKDAYS.map(day => (
+        <div key={day} className="bg-surface-container-low py-3 text-center text-[10px] font-label font-bold text-outline uppercase tracking-[0.2em]">
+          {day}
         </div>
-      )}
-
-      {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading...</div>
-      ) : (
-        <div className="grid grid-cols-7 gap-2">
-          {WEEKDAYS.map(day => (
-            <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
-              {day}
-            </div>
-          ))}
-          {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-            <div key={`empty-${i}`} />
-          ))}
-          {Array.from({ length: daysInMonth }).map((_, i) => renderDay(i + 1))}
-        </div>
-      )}
+      ))}
+      {Array.from({ length: firstDayOfMonth }).map((_, i) => (
+        <div key={`empty-${i}`} className="h-32 bg-surface-container opacity-30" />
+      ))}
+      {Array.from({ length: daysInMonth }).map((_, i) => renderDay(i + 1))}
+      {/* Fill remaining cells to complete the grid */}
+      {Array.from({ length: (7 - ((firstDayOfMonth + daysInMonth) % 7)) % 7 }).map((_, i) => (
+        <div key={`pad-${i}`} className="h-32 bg-surface-container opacity-30" />
+      ))}
     </div>
   )
 }
