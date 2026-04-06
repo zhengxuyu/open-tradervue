@@ -190,10 +190,20 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
     // Add markers for trades
     if (trades.length > 0) {
+      // Floor trade time to the start of the interval period
+      const intervalSeconds: Record<string, number> = {
+        '1min': 60,
+        '5min': 300,
+        '15min': 900,
+        '30min': 1800,
+        '60min': 3600,
+      }
+      const step = intervalSeconds[interval] || 60
+
       const markers: SeriesMarker<Time>[] = trades.map(trade => {
         const timeValue = interval === 'daily'
           ? trade.time.split('T')[0]
-          : Math.floor(new Date(trade.time).getTime() / 1000)
+          : Math.floor(new Date(trade.time).getTime() / 1000 / step) * step
 
         return {
           time: timeValue as Time,

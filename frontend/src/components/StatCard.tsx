@@ -1,66 +1,47 @@
-import { cn, formatCurrency, formatPercent, getPnLColor } from '@/lib/utils'
-import { Card, CardContent } from './Card'
-import type { LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface StatCardProps {
-  title: string
+  label: string
   value: string | number
-  icon?: LucideIcon
-  change?: number
-  isPnL?: boolean
-  isCurrency?: boolean
-  isPercent?: boolean
+  subLabel?: string
+  subValue?: string
+  accentColor?: 'secondary' | 'tertiary' | 'primary'
+  className?: string
+  children?: React.ReactNode
 }
 
 export function StatCard({
-  title,
+  label,
   value,
-  icon: Icon,
-  change,
-  isPnL = false,
-  isCurrency = false,
-  isPercent = false,
+  subLabel,
+  subValue,
+  accentColor,
+  className,
+  children,
 }: StatCardProps) {
-  const displayValue = () => {
-    if (typeof value === 'string') return value
-    if (isCurrency) return formatCurrency(value)
-    if (isPercent) return formatPercent(value)
-    return value.toString()
-  }
-
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-500">{title}</p>
-            <p
-              className={cn(
-                'mt-1 text-2xl font-semibold',
-                isPnL && typeof value === 'number' ? getPnLColor(value) : 'text-gray-900'
-              )}
-            >
-              {displayValue()}
-            </p>
-            {change !== undefined && (
-              <p
-                className={cn(
-                  'mt-1 text-sm',
-                  change >= 0 ? 'text-green-600' : 'text-red-600'
-                )}
-              >
-                {change >= 0 ? '+' : ''}
-                {change.toFixed(2)}%
-              </p>
-            )}
-          </div>
-          {Icon && (
-            <div className="rounded-full bg-blue-100 p-3">
-              <Icon className="h-6 w-6 text-blue-600" />
-            </div>
-          )}
+    <div
+      className={cn(
+        'bg-surface-container p-5 rounded-xl relative overflow-hidden',
+        accentColor && `border-l-2 border-${accentColor}`,
+        className
+      )}
+    >
+      <div className="text-[10px] font-label uppercase tracking-widest text-outline mb-2">
+        {label}
+      </div>
+      <div className={cn(
+        'text-xl font-bold font-data tabular-nums',
+        accentColor ? `text-${accentColor}` : 'text-on-surface'
+      )}>
+        {value}
+      </div>
+      {subLabel && (
+        <div className="mt-2 text-[10px] font-label text-outline uppercase tracking-wider">
+          {subLabel}: {subValue}
         </div>
-      </CardContent>
-    </Card>
+      )}
+      {children}
+    </div>
   )
 }
