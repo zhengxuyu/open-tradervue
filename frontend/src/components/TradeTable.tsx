@@ -1,106 +1,58 @@
 import type { Trade } from '@/services/api'
-import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
-import { Link } from 'react-router-dom'
+import { SideBadge } from './Badge'
+import { formatDate, formatTime, getPnLColor } from '@/lib/utils'
 
 interface TradeTableProps {
   trades: Trade[]
-  onDelete?: (id: number) => void
+  compact?: boolean
 }
 
-export function TradeTable({ trades, onDelete }: TradeTableProps) {
+export function TradeTable({ trades, compact = false }: TradeTableProps) {
   if (trades.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        No trades found. Import your trades to get started.
-      </div>
+      <div className="text-center py-8 text-outline text-sm">No trades found</div>
     )
   }
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="w-full text-left">
+        <thead className="bg-surface-container-low text-[10px] font-label uppercase tracking-widest text-outline">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Date
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Symbol
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Side
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Quantity
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Price
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Value
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Commission
-            </th>
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Actions
-            </th>
+            <th className="px-6 py-4 font-medium">Date / Time</th>
+            <th className="px-6 py-4 font-medium">Symbol</th>
+            <th className="px-6 py-4 font-medium text-center">Side</th>
+            <th className="px-6 py-4 font-medium text-right">Quantity</th>
+            <th className="px-6 py-4 font-medium text-right">Price</th>
+            {!compact && <th className="px-6 py-4 font-medium text-right">Commission</th>}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="divide-y divide-outline-variant/10">
           {trades.map((trade) => (
-            <tr key={trade.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {formatDateTime(trade.executed_at)}
+            <tr key={trade.id} className="hover:bg-surface-container-high transition-colors">
+              <td className="px-6 py-4">
+                <p className="text-xs font-semibold text-white">{formatDate(trade.executed_at)}</p>
+                <p className="text-[10px] font-label text-outline uppercase">
+                  {formatTime(trade.executed_at)}
+                </p>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <Link
-                  to={`/charts?symbol=${trade.symbol}`}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                >
-                  {trade.symbol}
-                </Link>
+              <td className="px-6 py-4">
+                <span className="text-xs font-data font-bold text-primary">{trade.symbol}</span>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span
-                  className={cn(
-                    'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                    trade.side === 'BUY'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  )}
-                >
-                  {trade.side}
-                </span>
+              <td className="px-6 py-4 text-center">
+                <SideBadge side={trade.side} />
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                {trade.quantity}
+              <td className="px-6 py-4 text-right font-data text-xs text-white">
+                {trade.quantity.toLocaleString()}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                {formatCurrency(trade.price)}
+              <td className="px-6 py-4 text-right font-data text-xs text-white">
+                ${trade.price.toFixed(2)}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                {formatCurrency(trade.price * trade.quantity)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                {formatCurrency(trade.commission)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <Link
-                  to={`/trades/${trade.id}`}
-                  className="text-blue-600 hover:text-blue-900 mr-4"
-                >
-                  Edit
-                </Link>
-                {onDelete && (
-                  <button
-                    onClick={() => onDelete(trade.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
-                )}
-              </td>
+              {!compact && (
+                <td className="px-6 py-4 text-right font-data text-xs text-outline">
+                  ${trade.commission.toFixed(2)}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

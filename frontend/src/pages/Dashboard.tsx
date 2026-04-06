@@ -1,28 +1,38 @@
 import { useEffect, useState } from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/Card'
-import { StatCard } from '@/components/StatCard'
+import { Link } from 'react-router-dom'
+import { TopAppBar } from '@/components/TopAppBar'
 import { TradeTable } from '@/components/TradeTable'
-import { getAnalysisSummary, getTrades, getPositions, type AnalysisSummary, type Trade, type Position } from '@/services/api'
+import { PnLValue } from '@/components/Badge'
+import {
+  getAnalysisSummary,
+  getTrades,
+  getAdvancedStatistics,
+  type AnalysisSummary,
+  type Trade,
+  type DailyPnlData,
+} from '@/services/api'
 import { formatCurrency } from '@/lib/utils'
-import { TrendingUp, TrendingDown, Activity, Target } from 'lucide-react'
+import {
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+} from 'recharts'
 
 export function Dashboard() {
   const [summary, setSummary] = useState<AnalysisSummary | null>(null)
   const [recentTrades, setRecentTrades] = useState<Trade[]>([])
-  const [openPositions, setOpenPositions] = useState<Position[]>([])
+  const [dailyPnl, setDailyPnl] = useState<DailyPnlData[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [summaryData, tradesData, positionsData] = await Promise.all([
+        const [summaryData, tradesData, statsData] = await Promise.all([
           getAnalysisSummary(),
           getTrades({ limit: 10 }),
-          getPositions({ status: 'open' })
+          getAdvancedStatistics(),
         ])
         setSummary(summaryData)
         setRecentTrades(tradesData)
-        setOpenPositions(positionsData)
+        setDailyPnl(statsData.daily_pnl.slice(-30))
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
       } finally {
@@ -34,116 +44,155 @@ export function Dashboard() {
 
   if (loading) {
     return (
-      <div className="text-center py-12 text-gray-500">Loading dashboard...</div>
+      <>
+        <TopAppBar title="Dashboard" />
+        <div className="p-6 text-center text-outline py-12">Loading dashboard...</div>
+      </>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Overview of your trading performance</p>
-      </div>
+    <>
+      <TopAppBar
+        title="Dashboard"
+        actions={
+          <button className="bg-primary text-on-primary text-xs font-label font-bold px-4 py-1.5 rounded-lg uppercase tracking-wider">
+            Export
+          </button>
+        }
+      />
+      <div className="p-6 space-y-6">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="bg-surface-container p-6 rounded-xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent" />
+            <p className="text-xs font-label uppercase tracking-widest text-slate-400 mb-2 relative">Total P&L</p>
+            <div className="flex items-end gap-2 relative">
+              <PnLValue value={summary?.total_pnl || 0} className="text-4xl font-headline font-extrabold tracking-tighter" />
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total P&L"
-          value={summary?.total_pnl || 0}
-          icon={summary?.total_pnl && summary.total_pnl >= 0 ? TrendingUp : TrendingDown}
-          isPnL
-          isCurrency
-        />
-        <StatCard
-          title="Win Rate"
-          value={summary?.win_rate || 0}
-          icon={Target}
-          isPercent
-        />
-        <StatCard
-          title="Total Trades"
-          value={summary?.total_trades || 0}
-          icon={Activity}
-        />
-        <StatCard
-          title="Profit Factor"
-          value={summary?.profit_factor?.toFixed(2) || '0.00'}
-        />
-      </div>
+          <div className="bg-surface-container p-6 rounded-xl flex items-center justify-between">
+            <div>
+              <p className="text-xs font-label uppercase tracking-widest text-slate-400 mb-2">Win Rate</p>
+              <p className="text-4xl font-headline font-extrabold text-white font-data">
+                {(summary?.win_rate || 0).toFixed(1)}%
+              </p>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Performance Stats</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {summary ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Winning Trades</p>
-                  <p className="text-xl font-semibold text-green-600">{summary.win_count}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Losing Trades</p>
-                  <p className="text-xl font-semibold text-red-600">{summary.loss_count}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Avg Win</p>
-                  <p className="text-xl font-semibold text-green-600">{formatCurrency(summary.avg_win)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Avg Loss</p>
-                  <p className="text-xl font-semibold text-red-600">{formatCurrency(summary.avg_loss)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Best Trade</p>
-                  <p className="text-xl font-semibold text-green-600">{formatCurrency(summary.best_trade)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Worst Trade</p>
-                  <p className="text-xl font-semibold text-red-600">{formatCurrency(summary.worst_trade)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Max Drawdown</p>
-                  <p className="text-xl font-semibold text-red-600">{formatCurrency(summary.max_drawdown)}</p>
-                </div>
+          <div className="bg-surface-container p-6 rounded-xl">
+            <p className="text-xs font-label uppercase tracking-widest text-slate-400 mb-2">Total Trades</p>
+            <p className="text-4xl font-headline font-extrabold text-white font-data">
+              {(summary?.total_trades || 0).toLocaleString()}
+            </p>
+            <div className="mt-4 flex items-center gap-4">
+              <div>
+                <p className="text-[10px] font-label text-slate-500 uppercase">Wins</p>
+                <p className="text-sm font-data font-semibold">{summary?.win_count || 0}</p>
               </div>
-            ) : (
-              <p className="text-gray-500">No data available</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Open Positions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {openPositions.length > 0 ? (
-              <div className="space-y-3">
-                {openPositions.map(pos => (
-                  <div key={pos.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{pos.symbol}</p>
-                      <p className="text-sm text-gray-500">{pos.quantity} shares @ {formatCurrency(pos.entry_price)}</p>
-                    </div>
-                  </div>
-                ))}
+              <div>
+                <p className="text-[10px] font-label text-slate-500 uppercase">Losses</p>
+                <p className="text-sm font-data font-semibold">{summary?.loss_count || 0}</p>
               </div>
-            ) : (
-              <p className="text-gray-500 text-center py-4">No open positions</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </div>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Trades</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <TradeTable trades={recentTrades} />
-        </CardContent>
-      </Card>
-    </div>
+          <div className="bg-surface-container p-6 rounded-xl">
+            <p className="text-xs font-label uppercase tracking-widest text-slate-400 mb-2">Profit Factor</p>
+            <p className="text-4xl font-headline font-extrabold text-primary font-data">
+              {(summary?.profit_factor || 0).toFixed(2)}
+            </p>
+          </div>
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-surface-container p-6 rounded-xl">
+            <h3 className="text-sm font-headline font-bold text-white uppercase tracking-wider mb-6">
+              Cumulative Performance
+            </h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={dailyPnl}>
+                  <defs>
+                    <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#a7c8ff" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#a7c8ff" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    tick={{ fontSize: 10, fill: '#8b919e' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: '#8b919e' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: '#1b2025', border: 'none', borderRadius: 8, fontSize: 12, color: '#dee3ea' }}
+                    labelStyle={{ color: '#8b919e' }}
+                    formatter={(value: number) => [formatCurrency(value), 'Cumulative P&L']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="cumulative_pnl"
+                    stroke="#a7c8ff"
+                    strokeWidth={2}
+                    fill="url(#pnlGradient)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-surface-container p-6 rounded-xl">
+            <h3 className="text-sm font-headline font-bold text-white uppercase tracking-wider mb-6">
+              Daily P&L
+            </h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailyPnl}>
+                  <XAxis dataKey="date" hide />
+                  <YAxis hide />
+                  <Tooltip
+                    contentStyle={{ background: '#1b2025', border: 'none', borderRadius: 8, fontSize: 12, color: '#dee3ea' }}
+                    formatter={(value: number) => [formatCurrency(value), 'P&L']}
+                  />
+                  <Bar dataKey="pnl" radius={[2, 2, 0, 0]} isAnimationActive={false}>
+                    {dailyPnl.map((entry, index) => (
+                      <Cell key={index} fill={entry.pnl >= 0 ? '#66d9cc' : '#ff6762'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Trades */}
+        <div className="bg-surface-container rounded-xl overflow-hidden">
+          <div className="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+            <h3 className="text-sm font-headline font-bold text-white uppercase tracking-wider">
+              Recent Executions
+            </h3>
+          </div>
+          <TradeTable trades={recentTrades} compact />
+          <div className="p-4 bg-surface-container-low border-t border-outline-variant/10 text-center">
+            <Link
+              to="/trades"
+              className="text-[10px] font-label font-bold text-primary uppercase tracking-widest hover:text-white transition-colors"
+            >
+              View All Trade History
+            </Link>
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
