@@ -72,4 +72,7 @@ FastAPI auto-generates OpenAPI docs at `/docs` (Swagger UI) and `/redoc`.
 
 ## License
 
-AGPL-3.0 — see [LICENSE](LICENSE)
+**TradeJournal.dev License** — see [LICENSE](LICENSE)
+
+- Non-commercial use: free and unlimited, must retain the Citation Module ("Powered by TradeJournal.dev")
+- Commercial use: 3% of revenue derived from the Software. Contact license@tradejournal.dev
