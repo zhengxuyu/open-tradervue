@@ -137,7 +137,7 @@ export function Dashboard() {
                   <Tooltip
                     contentStyle={{ background: '#1b2025', border: 'none', borderRadius: 8, fontSize: 12, color: '#dee3ea' }}
                     labelStyle={{ color: '#8b919e' }}
-                    formatter={(value: number) => [formatCurrency(value), 'Cumulative P&L']}
+                    formatter={(value) => [formatCurrency(Number(value)), 'Cumulative P&L']}
                   />
                   <Area
                     type="monotone"
@@ -162,7 +162,7 @@ export function Dashboard() {
                   <YAxis hide />
                   <Tooltip
                     contentStyle={{ background: '#1b2025', border: 'none', borderRadius: 8, fontSize: 12, color: '#dee3ea' }}
-                    formatter={(value: number) => [formatCurrency(value), 'P&L']}
+                    formatter={(value) => [formatCurrency(Number(value)), 'P&L']}
                   />
                   <Bar dataKey="pnl" radius={[2, 2, 0, 0]} isAnimationActive={false}>
                     {dailyPnl.map((entry, index) => (

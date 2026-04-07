@@ -201,6 +201,9 @@ export interface DailyPnlData {
   loss_count: number
   win_rate: number
   volume: number
+  gross_profit: number
+  gross_loss: number
+  cumulative_profit_factor: number | null
 }
 
 export interface StreakData {

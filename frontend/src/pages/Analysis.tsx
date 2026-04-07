@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { TopAppBar } from '@/components/TopAppBar'
-import { Icon } from '@/components/Icon'
 import {
   getAnalysisSummary,
   getAnalysisBySymbol,
@@ -348,7 +347,7 @@ export function Analysis() {
                             borderRadius: '8px',
                             fontSize: '12px',
                           }}
-                          formatter={(value: number) => [formatCurrency(value), 'P&L']}
+                          formatter={(value) => [formatCurrency(Number(value)), 'P&L']}
                         />
                         <Bar dataKey="total_pnl" radius={[4, 4, 0, 0]}>
                           {[...byDate].reverse().map((entry, index) => (

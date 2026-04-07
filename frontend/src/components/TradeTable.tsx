@@ -1,6 +1,6 @@
 import type { Trade } from '@/services/api'
 import { SideBadge } from './Badge'
-import { formatDate, formatTime, getPnLColor } from '@/lib/utils'
+import { formatDate, formatTime } from '@/lib/utils'
 
 interface TradeTableProps {
   trades: Trade[]

@@ -29,7 +29,7 @@ export function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [calendarData, setCalendarData] = useState<CalendarDay[]>([])
   const [monthSummaries, setMonthSummaries] = useState<MonthSummary[]>([])
-  const [yearSummaries, setYearSummaries] = useState<YearSummary[]>([])
+  const [, setYearSummaries] = useState<YearSummary[]>([])
   const [yearlyDailyData, setYearlyDailyData] = useState<Record<number, CalendarDay[]>>({})
   const [loading, setLoading] = useState(true)
 

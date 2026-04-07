@@ -84,15 +84,6 @@ export function PositionDetailPage() {
     setEditingTrades(new Map())
   }
 
-  const updateEditingTrade = (tradeId: number, field: keyof EditingTrade, value: string | number) => {
-    const newMap = new Map(editingTrades)
-    const trade = newMap.get(tradeId)
-    if (trade) {
-      newMap.set(tradeId, { ...trade, [field]: value })
-      setEditingTrades(newMap)
-    }
-  }
-
   const saveEdits = async () => {
     setIsSaving(true)
     try {
@@ -413,7 +404,6 @@ export function PositionDetailPage() {
               {position.trades
                 .sort((a, b) => new Date(a.executed_at).getTime() - new Date(b.executed_at).getTime())
                 .map((trade, idx, arr) => {
-                  const isEntry = position.entry_trade_ids.includes(trade.id)
                   return (
                     <div key={trade.id} className="flex items-center flex-1">
                       <div className="flex flex-col items-center">

@@ -5,7 +5,7 @@ import { Icon } from '@/components/Icon'
 import { TradingViewWidget } from '@/components/TradingViewWidget'
 import { getPositions, getAnalysisBySymbol, type SymbolAnalysis, type Position } from '@/services/api'
 import { formatCurrency, cn } from '@/lib/utils'
-import { PnLValue, SideBadge } from '@/components/Badge'
+import { PnLValue } from '@/components/Badge'
 
 export function Charts() {
   const [searchParams, setSearchParams] = useSearchParams()

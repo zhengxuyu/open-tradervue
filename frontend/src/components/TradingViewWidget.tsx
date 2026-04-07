@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, memo, useCallback } from 'react'
-import { Icon } from './Icon'
 
 interface TradingViewWidgetProps {
   symbol: string

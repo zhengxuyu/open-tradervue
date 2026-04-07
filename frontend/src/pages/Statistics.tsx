@@ -9,7 +9,7 @@ import {
 import { formatCurrency, cn, getPnLColor } from '@/lib/utils'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, ComposedChart, Area, LineChart, Line, ReferenceLine
+  ResponsiveContainer, Cell
 } from 'recharts'
 
 type TabType = 'hour' | 'day' | 'symbol' | 'holding' | 'pnl' | 'market' | 'risk'
@@ -101,7 +101,7 @@ export function Statistics() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.15} />
                 <XAxis dataKey="hour" tick={axisTickStyle} tickFormatter={(v) => `${v}:00`} />
                 <YAxis tick={axisTickStyle} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [formatCurrency(value), 'Avg P&L']} labelFormatter={(v) => `${v}:00`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value) => [formatCurrency(Number(value)), 'Avg P&L']} labelFormatter={(v) => `${v}:00`} />
                 <Bar dataKey="avg_pnl" radius={[4, 4, 0, 0]}>
                   {hourData.map((entry, i) => (
                     <Cell key={i} fill={entry.avg_pnl >= 0 ? '#66d9cc' : '#ff6762'} />
@@ -157,7 +157,7 @@ export function Statistics() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.15} />
                 <XAxis dataKey="day_name" tick={axisTickStyle} tickFormatter={(v) => v.slice(0, 3)} />
                 <YAxis tick={axisTickStyle} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [formatCurrency(value), 'Avg P&L']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value) => [formatCurrency(Number(value)), 'Avg P&L']} />
                 <Bar dataKey="avg_pnl" radius={[4, 4, 0, 0]}>
                   {dayData.map((entry, i) => (
                     <Cell key={i} fill={entry.avg_pnl >= 0 ? '#66d9cc' : '#ff6762'} />
@@ -213,7 +213,7 @@ export function Statistics() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.15} />
                 <XAxis type="number" tick={axisTickStyle} />
                 <YAxis dataKey="symbol" type="category" tick={axisTickStyle} width={60} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [formatCurrency(value), 'P&L']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value) => [formatCurrency(Number(value)), 'P&L']} />
                 <Bar dataKey="total_pnl" radius={[0, 4, 4, 0]}>
                   {sortedByPnl.slice(0, 20).map((entry, i) => (
                     <Cell key={i} fill={entry.total_pnl >= 0 ? '#66d9cc' : '#ff6762'} />
@@ -279,7 +279,7 @@ export function Statistics() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.15} />
                 <XAxis type="number" tick={axisTickStyle} />
                 <YAxis dataKey="range_label" type="category" tick={axisTickStyle} width={100} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [formatCurrency(value), 'Avg P&L']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value) => [formatCurrency(Number(value)), 'Avg P&L']} />
                 <Bar dataKey="avg_pnl" radius={[0, 4, 4, 0]}>
                   {holdData.map((entry, i) => (
                     <Cell key={i} fill={entry.avg_pnl >= 0 ? '#66d9cc' : '#ff6762'} />
@@ -343,7 +343,7 @@ export function Statistics() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.15} />
                   <XAxis dataKey="range_label" tick={axisTickStyle} angle={-45} textAnchor="end" height={60} />
                   <YAxis tick={axisTickStyle} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value} trades`, 'Count']} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(value) => [`${Number(value)} trades`, 'Count']} />
                   <Bar dataKey="trade_count" radius={[4, 4, 0, 0]}>
                     {distData.map((entry, i) => (
                       <Cell key={i} fill={entry.range_label.startsWith('-') || entry.range_label.startsWith('< -') ? '#ff6762' : '#66d9cc'} />
