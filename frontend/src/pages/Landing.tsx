@@ -82,14 +82,19 @@ export function Landing() {
             </p>
             <div className="mt-10 space-y-4">
               {[
-                ['check_circle', 'Sharpe, Sortino, Kelly — metrics that $49/mo tools charge for'],
+                ['check_circle', 'Sharpe, Sortino, Kelly, and more for only $15/mo'],
                 ['check_circle', '10+ analysis dimensions — by hour, day, symbol, market conditions'],
                 ['check_circle', 'P&L calendar heatmap — see your patterns at a glance'],
-                ['check_circle', 'Need a free version? Build your own with our open-source code'],
-              ].map(([icon, text]) => (
+                ['check_circle', 'Need a free version? Build your own with our open-source code', 'https://github.com/zhengxuyu/open-tradervue'],
+              ].map(([icon, text, link]) => (
                 <div key={text} className="flex items-start gap-3">
                   <span className="material-symbols-outlined text-emerald-500 text-xl mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
-                  <span className="text-slate-600 text-[15px]">{text}</span>
+                  <span className="text-slate-600 text-[15px]">
+                    {text}
+                    {link && (
+                      <> <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">→ GitHub</a></>
+                    )}
+                  </span>
                 </div>
               ))}
             </div>
