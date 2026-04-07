@@ -2,21 +2,6 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { loginWithGoogle } from '@/services/auth'
 
-const screenshots = [
-  { label: 'Dashboard', color: 'from-blue-500/20 to-cyan-500/10' },
-  { label: 'Calendar', color: 'from-emerald-500/20 to-teal-500/10' },
-  { label: 'Statistics', color: 'from-violet-500/20 to-purple-500/10' },
-  { label: 'Journal', color: 'from-amber-500/20 to-orange-500/10' },
-  { label: 'Analysis', color: 'from-cyan-500/20 to-blue-500/10' },
-  { label: 'Charts', color: 'from-rose-500/20 to-pink-500/10' },
-  { label: 'Import', color: 'from-indigo-500/20 to-blue-500/10' },
-  { label: 'Trades', color: 'from-teal-500/20 to-emerald-500/10' },
-  { label: 'Position', color: 'from-purple-500/20 to-violet-500/10' },
-  { label: 'Settings', color: 'from-orange-500/20 to-amber-500/10' },
-  { label: 'Heatmap', color: 'from-lime-500/20 to-green-500/10' },
-  { label: 'Metrics', color: 'from-pink-500/20 to-rose-500/10' },
-]
-
 const faqs = [
   {
     q: 'Is it really free?',
@@ -43,11 +28,6 @@ const comparisonRows = [
 
 export function Landing() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
-
-  const col1 = screenshots.slice(0, 3)
-  const col2 = screenshots.slice(3, 6)
-  const col3 = screenshots.slice(6, 9)
-  const col4 = screenshots.slice(9, 12)
 
   return (
     <div className="min-h-screen text-slate-900 overflow-x-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
