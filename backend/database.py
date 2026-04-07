@@ -3,13 +3,7 @@ import ssl
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
-# Debug: print all env vars containing DATABASE
-for k, v in os.environ.items():
-    if "DATABASE" in k.upper() or "DB" in k.upper():
-        print(f"[ENV] {k}={v[:40]}...", flush=True)
-
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./tradervue.db")
-print(f"[DATABASE] Resolved URL: {DATABASE_URL[:50]}...", flush=True)
 
 # Handle various DATABASE_URL formats
 _is_postgres = False
@@ -22,13 +16,14 @@ elif DATABASE_URL.startswith("postgresql://"):
 elif DATABASE_URL.startswith("postgresql+asyncpg://"):
     _is_postgres = True
 
-# asyncpg needs explicit SSL for Supabase
+# asyncpg + Supabase pgbouncer: need SSL + disable statement cache
 _connect_args = {}
+_engine_kwargs = {}
 if _is_postgres:
-    _connect_args = {"ssl": "require"}
+    _connect_args = {"ssl": "require", "statement_cache_size": 0}
+    _engine_kwargs = {"pool_pre_ping": True}
 
-print(f"[DATABASE] is_postgres={_is_postgres}, final URL: {DATABASE_URL[:40]}...", flush=True)
-engine = create_async_engine(DATABASE_URL, echo=False, connect_args=_connect_args)
+engine = create_async_engine(DATABASE_URL, echo=False, connect_args=_connect_args, **_engine_kwargs)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
