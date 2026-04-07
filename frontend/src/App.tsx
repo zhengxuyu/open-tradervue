@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
 import { Dashboard } from '@/pages/Dashboard'
 import { Trades } from '@/pages/Trades'
@@ -11,25 +11,35 @@ import { Statistics } from '@/pages/Statistics'
 import { Charts } from '@/pages/Charts'
 import { Journal } from '@/pages/Journal'
 import { Settings } from '@/pages/Settings'
+import { Login } from '@/pages/Login'
+import { Register } from '@/pages/Register'
+import { isAuthenticated } from '@/services/auth'
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />
+  }
+  return <Layout>{children}</Layout>
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/trades" element={<Trades />} />
-          <Route path="/positions/daily" element={<DailyPositionDetail />} />
-          <Route path="/positions/:id" element={<PositionDetailPage />} />
-          <Route path="/import" element={<Import />} />
-          <Route path="/calendar" element={<Calendar />} />
-          <Route path="/analysis" element={<Analysis />} />
-          <Route path="/statistics" element={<Statistics />} />
-          <Route path="/charts" element={<Charts />} />
-          <Route path="/journal" element={<Journal />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/trades" element={<PrivateRoute><Trades /></PrivateRoute>} />
+        <Route path="/positions/daily" element={<PrivateRoute><DailyPositionDetail /></PrivateRoute>} />
+        <Route path="/positions/:id" element={<PrivateRoute><PositionDetailPage /></PrivateRoute>} />
+        <Route path="/import" element={<PrivateRoute><Import /></PrivateRoute>} />
+        <Route path="/calendar" element={<PrivateRoute><Calendar /></PrivateRoute>} />
+        <Route path="/analysis" element={<PrivateRoute><Analysis /></PrivateRoute>} />
+        <Route path="/statistics" element={<PrivateRoute><Statistics /></PrivateRoute>} />
+        <Route path="/charts" element={<PrivateRoute><Charts /></PrivateRoute>} />
+        <Route path="/journal" element={<PrivateRoute><Journal /></PrivateRoute>} />
+        <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+      </Routes>
     </BrowserRouter>
   )
 }

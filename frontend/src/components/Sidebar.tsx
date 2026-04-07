@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Icon } from './Icon'
 import { cn } from '@/lib/utils'
+import { getStoredUser, logout } from '@/services/auth'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: 'dashboard' },
@@ -15,6 +16,7 @@ const navigation = [
 
 export function Sidebar() {
   const location = useLocation()
+  const user = getStoredUser()
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 z-40 h-full w-64 border-r border-[#1b2025] bg-surface-container-low font-body antialiased">
@@ -57,18 +59,29 @@ export function Sidebar() {
               <Icon name="person" className="text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">Pro Account</p>
-              <Link
-                to="/settings"
-                className={cn(
-                  'text-xs font-label transition-colors',
-                  location.pathname === '/settings'
-                    ? 'text-blue-400'
-                    : 'text-slate-500 hover:text-slate-300'
-                )}
-              >
-                Settings
-              </Link>
+              <p className="text-sm font-semibold text-white truncate">
+                {user?.username || 'Account'}
+              </p>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/settings"
+                  className={cn(
+                    'text-xs font-label transition-colors',
+                    location.pathname === '/settings'
+                      ? 'text-blue-400'
+                      : 'text-slate-500 hover:text-slate-300'
+                  )}
+                >
+                  Settings
+                </Link>
+                <span className="text-slate-600 text-xs">|</span>
+                <button
+                  onClick={logout}
+                  className="text-xs font-label text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
         </div>
