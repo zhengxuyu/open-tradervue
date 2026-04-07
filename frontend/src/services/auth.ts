@@ -10,12 +10,10 @@ export interface AuthUser {
 }
 
 export async function login(email: string, password: string): Promise<AuthUser> {
-  const formData = new URLSearchParams()
-  formData.append('username', email)  // OAuth2 spec uses 'username' field
-  formData.append('password', password)
-
-  const { data } = await api.post('/auth/login', formData, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  const { data } = await api.post('/auth/login', {
+    email,
+    username: email,
+    password,
   })
   localStorage.setItem(TOKEN_KEY, data.access_token)
 
