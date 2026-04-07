@@ -9,3 +9,4 @@ frontend/.vite
 docs/
 .github/
 *.md
+!README.md
