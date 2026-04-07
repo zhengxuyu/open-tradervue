@@ -44,9 +44,12 @@ function App() {
     })
 
     // Listen for auth changes (OAuth callback, login, logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setLoading(false)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only update on real auth events, not token refresh noise
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
+        setSession(session)
+        setLoading(false)
+      }
     })
 
     return () => subscription.unsubscribe()
