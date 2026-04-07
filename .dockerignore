@@ -1,0 +1,11 @@
+.venv
+__pycache__
+*.pyc
+.git
+.env
+tradervue.db
+frontend/node_modules
+frontend/.vite
+docs/
+.github/
+*.md
