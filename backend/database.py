@@ -22,13 +22,10 @@ elif DATABASE_URL.startswith("postgresql://"):
 elif DATABASE_URL.startswith("postgresql+asyncpg://"):
     _is_postgres = True
 
-# asyncpg needs explicit SSL context for Supabase
+# asyncpg needs explicit SSL for Supabase
 _connect_args = {}
 if _is_postgres:
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-    _connect_args = {"ssl": ssl_context}
+    _connect_args = {"ssl": "require"}
 
 print(f"[DATABASE] is_postgres={_is_postgres}, final URL: {DATABASE_URL[:40]}...", flush=True)
 engine = create_async_engine(DATABASE_URL, echo=False, connect_args=_connect_args)
