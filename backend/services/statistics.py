@@ -267,13 +267,14 @@ class StatisticsService:
         db: AsyncSession,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
-        symbol: Optional[str] = None
+        symbol: Optional[str] = None,
+        user_id: Optional[int] = None,
     ) -> AdvancedStatistics:
         """Get comprehensive trading statistics."""
         analysis_service = AnalysisService()
 
         # Get all positions with trades
-        positions_with_trades = await analysis_service.calculate_positions_with_trades(db, symbol)
+        positions_with_trades = await analysis_service.calculate_positions_with_trades(db, symbol, user_id=user_id)
 
         # Enrich with market data
         await self._enrich_positions_with_market_data(db, positions_with_trades)

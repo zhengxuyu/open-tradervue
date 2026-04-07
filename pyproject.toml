@@ -17,6 +17,8 @@ dependencies = [
     "greenlet>=3.2.4",
     "yfinance>=0.2.36",
     "python-dotenv>=1.0.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
 ]
 
 [project.scripts]

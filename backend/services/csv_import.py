@@ -112,7 +112,8 @@ class CSVImportService:
         content: str,
         db: AsyncSession,
         mapping: Optional[CSVFieldMapping] = None,
-        timezone: Optional[str] = None
+        timezone: Optional[str] = None,
+        user_id: Optional[int] = None,
     ) -> ImportResult:
         df = pd.read_csv(StringIO(content))
 
@@ -174,6 +175,7 @@ class CSVImportService:
                         notes = str(notes_val)
 
                 trade = Trade(
+                    user_id=user_id,
                     symbol=symbol,
                     side=side,
                     quantity=quantity,

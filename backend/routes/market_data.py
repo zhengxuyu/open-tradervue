@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import Optional
 
 from ..database import get_db
+from ..auth import get_current_user
+from ..models.user import User
 from ..schemas import KlineData
 from ..services.yahoo_finance import YahooFinanceService
 
@@ -17,7 +19,8 @@ async def get_kline(
     symbol: str = Query(..., min_length=1, max_length=10),
     interval: str = Query("daily", pattern="^(1min|5min|15min|30min|60min|daily|1d|1h)$"),
     start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None,
+    current_user: User = Depends(get_current_user),
 ):
     try:
         klines = await yahoo_finance_service.get_kline(
@@ -36,12 +39,13 @@ async def get_trades_with_kline(
     symbol: str = Query(..., min_length=1, max_length=10),
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import select
     from ..models.trade import Trade
 
-    query = select(Trade).where(Trade.symbol == symbol.upper())
+    query = select(Trade).where(Trade.symbol == symbol.upper(), Trade.user_id == current_user.id)
     if start_date:
         query = query.where(Trade.executed_at >= start_date)
     if end_date:

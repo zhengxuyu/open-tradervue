@@ -7,6 +7,7 @@ class Journal(Base):
     __tablename__ = "journals"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=True, index=True)
     date = Column(String(10), nullable=False, unique=True, index=True)  # YYYY-MM-DD format
     content = Column(Text, nullable=True)  # Main journal content/notes
     mood = Column(String(20), nullable=True)  # e.g., 'good', 'neutral', 'bad'

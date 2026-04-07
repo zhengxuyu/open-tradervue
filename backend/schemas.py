@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional
 
@@ -417,3 +417,23 @@ class JournalResponse(JournalBase):
 
 class JournalWithTrades(JournalResponse):
     positions: list[PositionResponse] = []
+
+
+class UserCreate(BaseModel):
+    email: str
+    username: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    username: str
+    is_active: bool
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str

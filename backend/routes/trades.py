@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import Optional
 
 from ..database import get_db
+from ..auth import get_current_user
+from ..models.user import User
 from ..models.trade import Trade
 from ..schemas import (
     TradeCreate, TradeUpdate, TradeResponse,
@@ -25,9 +27,10 @@ async def get_trades(
     tags: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    query = select(Trade).order_by(Trade.executed_at.desc())
+    query = select(Trade).where(Trade.user_id == current_user.id).order_by(Trade.executed_at.desc())
 
     if symbol:
         query = query.where(Trade.symbol == symbol.upper())
@@ -44,8 +47,8 @@ async def get_trades(
 
 
 @router.get("/{trade_id}", response_model=TradeResponse)
-async def get_trade(trade_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Trade).where(Trade.id == trade_id))
+async def get_trade(trade_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(Trade).where(Trade.id == trade_id, Trade.user_id == current_user.id))
     trade = result.scalar_one_or_none()
     if not trade:
         raise HTTPException(status_code=404, detail="Trade not found")
@@ -53,8 +56,9 @@ async def get_trade(trade_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("", response_model=TradeResponse, status_code=201)
-async def create_trade(trade: TradeCreate, db: AsyncSession = Depends(get_db)):
+async def create_trade(trade: TradeCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_trade = Trade(
+        user_id=current_user.id,
         symbol=trade.symbol.upper(),
         side=trade.side.upper(),
         quantity=trade.quantity,
@@ -71,8 +75,8 @@ async def create_trade(trade: TradeCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.put("/{trade_id}", response_model=TradeResponse)
-async def update_trade(trade_id: int, trade: TradeUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Trade).where(Trade.id == trade_id))
+async def update_trade(trade_id: int, trade: TradeUpdate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(Trade).where(Trade.id == trade_id, Trade.user_id == current_user.id))
     db_trade = result.scalar_one_or_none()
     if not db_trade:
         raise HTTPException(status_code=404, detail="Trade not found")
@@ -91,8 +95,8 @@ async def update_trade(trade_id: int, trade: TradeUpdate, db: AsyncSession = Dep
 
 
 @router.delete("/{trade_id}", status_code=204)
-async def delete_trade(trade_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Trade).where(Trade.id == trade_id))
+async def delete_trade(trade_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(Trade).where(Trade.id == trade_id, Trade.user_id == current_user.id))
     db_trade = result.scalar_one_or_none()
     if not db_trade:
         raise HTTPException(status_code=404, detail="Trade not found")
@@ -102,7 +106,7 @@ async def delete_trade(trade_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/import/preview", response_model=CSVPreview)
-async def preview_csv(file: UploadFile = File(...)):
+async def preview_csv(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="File must be a CSV")
 
@@ -112,7 +116,7 @@ async def preview_csv(file: UploadFile = File(...)):
 
 
 @router.post("/import/preview-text", response_model=CSVPreview)
-async def preview_csv_text(request: CSVTextPreviewRequest):
+async def preview_csv_text(request: CSVTextPreviewRequest, current_user: User = Depends(get_current_user)):
     if not request.content.strip():
         raise HTTPException(status_code=400, detail="Content cannot be empty")
 
@@ -125,7 +129,8 @@ async def import_csv(
     file: UploadFile = File(...),
     mapping: Optional[str] = Form(None),
     timezone: Optional[str] = Form(None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="File must be a CSV")
@@ -138,13 +143,14 @@ async def import_csv(
         import json
         field_mapping = CSVFieldMapping(**json.loads(mapping))
 
-    return await service.import_csv(content.decode('utf-8'), db, field_mapping, timezone)
+    return await service.import_csv(content.decode('utf-8'), db, field_mapping, timezone, user_id=current_user.id)
 
 
 @router.post("/import-text", response_model=ImportResult)
 async def import_csv_text(
     request: CSVTextImportRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     if not request.content.strip():
         raise HTTPException(status_code=400, detail="Content cannot be empty")
@@ -154,5 +160,6 @@ async def import_csv_text(
         request.content,
         db,
         request.mapping,
-        request.timezone
+        request.timezone,
+        user_id=current_user.id,
     )

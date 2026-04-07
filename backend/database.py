@@ -24,7 +24,7 @@ async def get_db():
 
 async def init_db():
     # Import all models to ensure tables are created
-    from .models import Trade, Position, Journal, DailyMarketData  # noqa: F401
+    from .models import Trade, Position, Journal, DailyMarketData, User  # noqa: F401
     from .models.market_data import SymbolInfo  # noqa: F401
 
     async with engine.begin() as conn:

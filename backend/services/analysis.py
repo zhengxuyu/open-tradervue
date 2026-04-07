@@ -22,10 +22,13 @@ class AnalysisService:
     async def calculate_positions_with_trades(
         self,
         db: AsyncSession,
-        symbol: Optional[str] = None
+        symbol: Optional[str] = None,
+        user_id: Optional[int] = None,
     ) -> list[PositionWithTrades]:
         """Calculate positions using FIFO matching, tracking which trades belong to each position."""
         query = select(Trade).order_by(Trade.executed_at.asc())
+        if user_id is not None:
+            query = query.where(Trade.user_id == user_id)
         if symbol:
             query = query.where(Trade.symbol == symbol.upper())
 
@@ -128,18 +131,19 @@ class AnalysisService:
 
         return positions_with_trades
 
-    async def calculate_positions(self, db: AsyncSession, symbol: Optional[str] = None) -> list[Position]:
+    async def calculate_positions(self, db: AsyncSession, symbol: Optional[str] = None, user_id: Optional[int] = None) -> list[Position]:
         """Calculate positions using FIFO matching of buys and sells."""
-        positions_with_trades = await self.calculate_positions_with_trades(db, symbol)
+        positions_with_trades = await self.calculate_positions_with_trades(db, symbol, user_id=user_id)
         return [pwt.position for pwt in positions_with_trades]
 
     async def get_position_detail(
         self,
         db: AsyncSession,
-        position_id: int
+        position_id: int,
+        user_id: Optional[int] = None,
     ) -> Optional[dict]:
         """Get position details including all associated trades."""
-        positions_with_trades = await self.calculate_positions_with_trades(db)
+        positions_with_trades = await self.calculate_positions_with_trades(db, user_id=user_id)
 
         # Find the position by ID
         target_pos = None
@@ -172,9 +176,10 @@ class AnalysisService:
         self,
         db: AsyncSession,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        user_id: Optional[int] = None,
     ) -> AnalysisSummary:
-        positions = await self.calculate_positions(db)
+        positions = await self.calculate_positions(db, user_id=user_id)
 
         closed_positions = [p for p in positions if p.status == "closed"]
         if start_date:
@@ -247,9 +252,10 @@ class AnalysisService:
         self,
         db: AsyncSession,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        user_id: Optional[int] = None,
     ) -> list[SymbolAnalysis]:
-        positions = await self.calculate_positions(db)
+        positions = await self.calculate_positions(db, user_id=user_id)
         closed_positions = [p for p in positions if p.status == "closed"]
 
         if start_date:
@@ -291,9 +297,10 @@ class AnalysisService:
         self,
         db: AsyncSession,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        user_id: Optional[int] = None,
     ) -> list[DateAnalysis]:
-        positions = await self.calculate_positions(db)
+        positions = await self.calculate_positions(db, user_id=user_id)
         closed_positions = [p for p in positions if p.status == "closed"]
 
         if start_date:

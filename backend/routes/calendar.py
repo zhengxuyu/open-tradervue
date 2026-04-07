@@ -6,6 +6,8 @@ from collections import defaultdict
 import calendar
 
 from ..database import get_db
+from ..auth import get_current_user
+from ..models.user import User
 from ..schemas import CalendarDay, MonthSummary, YearSummary
 from ..services.analysis import AnalysisService
 
@@ -16,10 +18,11 @@ router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 async def get_daily_calendar(
     year: int = Query(..., ge=2000, le=2100),
     month: int = Query(..., ge=1, le=12),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = AnalysisService()
-    positions = await service.calculate_positions(db)
+    positions = await service.calculate_positions(db, user_id=current_user.id)
     closed_positions = [p for p in positions if p.status == "closed"]
 
     month_positions = [
@@ -57,10 +60,11 @@ async def get_daily_calendar(
 @router.get("/monthly", response_model=list[MonthSummary])
 async def get_monthly_summary(
     year: int = Query(..., ge=2000, le=2100),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = AnalysisService()
-    positions = await service.calculate_positions(db)
+    positions = await service.calculate_positions(db, user_id=current_user.id)
     closed_positions = [p for p in positions if p.status == "closed"]
 
     year_positions = [p for p in closed_positions if p.exit_time.year == year]
@@ -114,10 +118,11 @@ async def get_monthly_summary(
 
 @router.get("/yearly", response_model=list[YearSummary])
 async def get_yearly_summary(
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = AnalysisService()
-    positions = await service.calculate_positions(db)
+    positions = await service.calculate_positions(db, user_id=current_user.id)
     closed_positions = [p for p in positions if p.status == "closed"]
 
     yearly_stats: dict[int, dict] = defaultdict(lambda: {

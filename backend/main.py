@@ -8,6 +8,7 @@ load_dotenv()
 
 from .database import init_db
 from .routes import trades_router, analysis_router, calendar_router, market_data_router, journal_router
+from .routes.auth import router as auth_router
 
 
 @asynccontextmanager
@@ -31,6 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
 app.include_router(trades_router)
 app.include_router(analysis_router)
 app.include_router(calendar_router)

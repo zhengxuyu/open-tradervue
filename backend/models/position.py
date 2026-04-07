@@ -7,6 +7,7 @@ class Position(Base):
     __tablename__ = "positions"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=True, index=True)
     symbol = Column(String(20), nullable=False, index=True)
     entry_price = Column(Float, nullable=False)
     exit_price = Column(Float, nullable=True)

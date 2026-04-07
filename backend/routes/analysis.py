@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import Optional
 
 from ..database import get_db
+from ..auth import get_current_user
+from ..models.user import User
 from ..models.trade import Trade
 from ..schemas import (
     AnalysisSummary, SymbolAnalysis, DateAnalysis,
@@ -22,10 +24,11 @@ router = APIRouter(prefix="/api", tags=["analysis"])
 async def get_positions(
     symbol: Optional[str] = None,
     status: Optional[str] = Query(None, pattern="^(open|closed)$"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = AnalysisService()
-    positions = await service.calculate_positions(db, symbol)
+    positions = await service.calculate_positions(db, symbol, user_id=current_user.id)
 
     if status:
         positions = [p for p in positions if p.status == status]
@@ -42,10 +45,11 @@ async def get_positions(
 @router.get("/positions/{position_id}", response_model=PositionDetailResponse)
 async def get_position_detail(
     position_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = AnalysisService()
-    detail = await service.get_position_detail(db, position_id)
+    detail = await service.get_position_detail(db, position_id, user_id=current_user.id)
 
     if not detail:
         raise HTTPException(status_code=404, detail="Position not found")
@@ -87,11 +91,12 @@ async def get_position_detail(
 @router.delete("/positions/{position_id}")
 async def delete_position(
     position_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a position and all its associated trades."""
     service = AnalysisService()
-    detail = await service.get_position_detail(db, position_id)
+    detail = await service.get_position_detail(db, position_id, user_id=current_user.id)
 
     if not detail:
         raise HTTPException(status_code=404, detail="Position not found")
@@ -108,7 +113,8 @@ async def delete_position(
 @router.delete("/positions")
 async def delete_positions(
     position_ids: list[int] = Query(...),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete multiple positions and all their associated trades."""
     service = AnalysisService()
@@ -119,7 +125,7 @@ async def delete_positions(
     all_trade_ids = set()
 
     for position_id in position_ids:
-        detail = await service.get_position_detail(db, position_id)
+        detail = await service.get_position_detail(db, position_id, user_id=current_user.id)
         if detail:
             trade_ids = detail["entry_trade_ids"] + detail["exit_trade_ids"]
             all_trade_ids.update(trade_ids)
@@ -136,30 +142,33 @@ async def delete_positions(
 async def get_analysis_summary(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = AnalysisService()
-    return await service.get_summary(db, start_date, end_date)
+    return await service.get_summary(db, start_date, end_date, user_id=current_user.id)
 
 
 @router.get("/analysis/by-symbol", response_model=list[SymbolAnalysis])
 async def get_analysis_by_symbol(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = AnalysisService()
-    return await service.get_by_symbol(db, start_date, end_date)
+    return await service.get_by_symbol(db, start_date, end_date, user_id=current_user.id)
 
 
 @router.get("/analysis/by-date", response_model=list[DateAnalysis])
 async def get_analysis_by_date(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = AnalysisService()
-    return await service.get_by_date(db, start_date, end_date)
+    return await service.get_by_date(db, start_date, end_date, user_id=current_user.id)
 
 
 @router.get("/analysis/advanced", response_model=AdvancedStatistics)
@@ -167,22 +176,24 @@ async def get_advanced_statistics(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     symbol: Optional[str] = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Get advanced trading statistics with breakdowns by symbol, hour, day, holding time, etc."""
     service = StatisticsService()
-    return await service.get_advanced_statistics(db, start_date, end_date, symbol)
+    return await service.get_advanced_statistics(db, start_date, end_date, symbol, user_id=current_user.id)
 
 
 @router.post("/market-data/fetch")
 async def fetch_market_data(
     symbols: list[str] = Query(None, description="Symbols to fetch. If empty, fetches for all traded symbols."),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Fetch and store market data from Alpha Vantage for the specified symbols."""
     # If no symbols provided, get all unique symbols from trades
     if not symbols:
-        result = await db.execute(select(Trade.symbol).distinct())
+        result = await db.execute(select(Trade.symbol).where(Trade.user_id == current_user.id).distinct())
         symbols = [row[0] for row in result.fetchall()]
 
     if not symbols:
@@ -201,7 +212,8 @@ async def fetch_market_data(
 async def fetch_market_data_for_symbol(
     symbol: str,
     force_refresh: bool = Query(False, description="Force refresh even if data exists"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Fetch and store market data for a specific symbol."""
     count = await market_data_service.fetch_and_store_market_data(db, symbol, force_refresh)
