@@ -1,84 +1,82 @@
 import os
+import logging
 from typing import Optional
 
+import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
+from jose import jwt, jwk, JWTError
+from jose.utils import base64url_decode
 
-# Supabase JWT secret — find in Supabase Dashboard → Settings → API → JWT Secret
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+logger = logging.getLogger("tradervue.auth")
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://awmvrbkqpadohwbddabn.supabase.co")
+
+# Cache JWKS keys
+_jwks_cache: dict = {}
 
 security = HTTPBearer(auto_error=False)
 
 
 class CurrentUser:
-    """Represents the authenticated user from Supabase JWT."""
     def __init__(self, id: str, email: str):
         self.id = id
         self.email = email
+
+
+async def _get_jwks() -> dict:
+    global _jwks_cache
+    if _jwks_cache:
+        return _jwks_cache
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json")
+        _jwks_cache = resp.json()
+    return _jwks_cache
 
 
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> CurrentUser:
     if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
     token = credentials.credentials
-    import logging
-    logger = logging.getLogger("tradervue.auth")
-    import logging
-    import json
-    import base64
-    logger = logging.getLogger("tradervue.auth")
-
-    # Decode header to check algorithm
-    try:
-        header_b64 = token.split('.')[0]
-        # Add padding
-        header_b64 += '=' * (4 - len(header_b64) % 4)
-        header = json.loads(base64.urlsafe_b64decode(header_b64))
-        logger.info(f"JWT header: {header}")
-    except Exception as e:
-        logger.error(f"Failed to decode JWT header: {e}")
 
     try:
-        # Try with the algorithm from the token header
+        # Get JWKS and find the right key
+        jwks_data = await _get_jwks()
+        header = jwt.get_unverified_header(token)
+        kid = header.get("kid")
+
+        key_data = None
+        for k in jwks_data.get("keys", []):
+            if k["kid"] == kid:
+                key_data = k
+                break
+
+        if not key_data:
+            logger.error(f"No matching JWK for kid={kid}")
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        # Build the public key and verify
+        public_key = jwk.construct(key_data, algorithm="ES256")
         payload = jwt.decode(
             token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256", "HS384", "HS512"],
+            public_key,
+            algorithms=["ES256"],
             audience="authenticated",
         )
+
         user_id = payload.get("sub")
         email = payload.get("email", "")
-        logger.info(f"Auth success: user={user_id}, email={email}")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
+
         return CurrentUser(id=user_id, email=email)
+
     except JWTError as e:
         logger.error(f"JWT decode failed: {e}")
-
-        # Fallback: try without audience verification
-        try:
-            payload = jwt.decode(
-                token,
-                SUPABASE_JWT_SECRET,
-                algorithms=["HS256", "HS384", "HS512"],
-                options={"verify_aud": False},
-            )
-            user_id = payload.get("sub")
-            email = payload.get("email", "")
-            logger.info(f"Auth success (no aud check): user={user_id}, email={email}")
-            if not user_id:
-                raise HTTPException(status_code=401, detail="Invalid token")
-            return CurrentUser(id=user_id, email=email)
-        except JWTError as e2:
-            logger.error(f"JWT decode failed (fallback): {e2}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Invalid or expired token",
-            )
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    except Exception as e:
+        logger.error(f"Auth error: {e}")
+        raise HTTPException(status_code=401, detail="Authentication failed")
