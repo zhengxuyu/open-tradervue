@@ -347,9 +347,14 @@ export function Landing() {
                 </li>
               ))}
             </ul>
-            <button className="mt-8 w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-medium hover:shadow-lg hover:shadow-blue-500/20 transition-all">
-              Start Free Trial
-            </button>
+            <a
+              href={`https://checkout.stripe.com/pay/price_1TJiwsL4PxdjwaQBMAEAeQOQ`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-8 w-full block text-center py-3 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-medium hover:shadow-lg hover:shadow-blue-500/20 transition-all"
+            >
+              Subscribe — $15/mo
+            </a>
           </div>
         </div>
       </section>
@@ -381,17 +386,31 @@ export function Landing() {
 
       {/* Footer */}
       <footer className="mt-12 py-12 border-t border-slate-200/40">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="text-center md:text-left">
-            <span className="font-bold" style={{ fontFamily: "'Space Grotesk', monospace" }}>
-              TradeJournal<span className="text-blue-600">.dev</span>
-            </span>
-            <p className="text-sm text-slate-400 mt-1">Open source trading journal. Free for non-commercial use.</p>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-8">
+            <div>
+              <span className="font-bold" style={{ fontFamily: "'Space Grotesk', monospace" }}>
+                TradeJournal<span className="text-blue-600">.dev</span>
+              </span>
+              <p className="text-sm text-slate-400 mt-1">Open source trading journal. Free for non-commercial use.</p>
+            </div>
+            <div className="flex gap-8 text-sm text-slate-400">
+              <div className="flex flex-col gap-2">
+                <span className="text-slate-600 font-medium text-xs uppercase tracking-wider">Product</span>
+                <a href="#features" className="hover:text-slate-700 transition-colors">Features</a>
+                <a href="#pricing" className="hover:text-slate-700 transition-colors">Pricing</a>
+                <Link to="/login" className="hover:text-slate-700 transition-colors">Log in</Link>
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-slate-600 font-medium text-xs uppercase tracking-wider">Open Source</span>
+                <a href="https://github.com/zhengxuyu/open-tradervue" target="_blank" rel="noopener noreferrer" className="hover:text-slate-700 transition-colors">GitHub</a>
+                <a href="https://github.com/zhengxuyu/open-tradervue/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="hover:text-slate-700 transition-colors">License</a>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-6 text-sm text-slate-400">
-            <a href="https://github.com/zhengxuyu/open-tradervue" target="_blank" rel="noopener noreferrer" className="hover:text-slate-700 transition-colors">GitHub</a>
-            <Link to="/login" className="hover:text-slate-700 transition-colors">Log in</Link>
-            <a href="#pricing" className="hover:text-slate-700 transition-colors">Pricing</a>
+          <div className="mt-8 pt-6 border-t border-slate-100/60 flex flex-col md:flex-row justify-between items-center gap-2 text-xs text-slate-300">
+            <span>&copy; {new Date().getFullYear()} TradeJournal.dev</span>
+            <span>TradeJournal.dev License — free for non-commercial use</span>
           </div>
         </div>
       </footer>

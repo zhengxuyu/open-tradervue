@@ -70,9 +70,23 @@ FastAPI auto-generates OpenAPI docs at `/docs` (Swagger UI) and `/redoc`.
 4. Run tests: `uv run pytest tests/ -v`
 5. Submit a PR
 
+## Citation Module (Required)
+
+If you use TradeJournal.dev in any deployment, the following attribution must remain visible and unmodified in your application's UI. Removing or hiding it violates the license.
+
+```html
+<a href="https://tradejournal.dev" target="_blank" rel="noopener noreferrer">
+  Powered by TradeJournal.dev
+</a>
+```
+
+The built-in `<Citation />` component at `frontend/src/components/Citation.tsx` renders this automatically. Do not remove it.
+
 ## License
 
 **TradeJournal.dev License** — see [LICENSE](LICENSE)
 
-- Non-commercial use: free and unlimited, must retain the Citation Module ("Powered by TradeJournal.dev")
-- Commercial use: 3% of revenue derived from the Software. Contact yuzxfred@gmail.com
+- Non-commercial use: free and unlimited, must retain the Citation Module above
+- Commercial use: 3% of gross revenue derived from the Software, calculated quarterly
+- Commercial license holders may negotiate Citation Module modification
+- Contact: yuzxfred@gmail.com
