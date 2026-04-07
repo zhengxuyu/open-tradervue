@@ -134,32 +134,32 @@ export function Dashboard() {
                 <AreaChart data={dailyPnl}>
                   <defs>
                     <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#a7c8ff" stopOpacity={0.2} />
-                      <stop offset="100%" stopColor="#a7c8ff" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#fb923c" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#fb923c" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis
                     dataKey="date"
                     tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    tick={{ fontSize: 10, fill: '#8b919e' }}
+                    tick={{ fontSize: 10, fill: '#78716c' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 10, fill: '#8b919e' }}
+                    tick={{ fontSize: 10, fill: '#78716c' }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
                   />
                   <Tooltip
-                    contentStyle={{ background: '#1b2025', border: 'none', borderRadius: 8, fontSize: 12, color: '#dee3ea' }}
-                    labelStyle={{ color: '#8b919e' }}
+                    contentStyle={{ background: '#292524', border: 'none', borderRadius: 8, fontSize: 12, color: '#fafaf9' }}
+                    labelStyle={{ color: '#78716c' }}
                     formatter={(value) => [formatCurrency(Number(value)), 'Cumulative P&L']}
                   />
                   <Area
                     type="monotone"
                     dataKey="cumulative_pnl"
-                    stroke="#a7c8ff"
+                    stroke="#fb923c"
                     strokeWidth={2}
                     fill="url(#pnlGradient)"
                   />
@@ -178,12 +178,12 @@ export function Dashboard() {
                   <XAxis dataKey="date" hide />
                   <YAxis hide />
                   <Tooltip
-                    contentStyle={{ background: '#1b2025', border: 'none', borderRadius: 8, fontSize: 12, color: '#dee3ea' }}
+                    contentStyle={{ background: '#292524', border: 'none', borderRadius: 8, fontSize: 12, color: '#fafaf9' }}
                     formatter={(value) => [formatCurrency(Number(value)), 'P&L']}
                   />
                   <Bar dataKey="pnl" radius={[2, 2, 0, 0]} isAnimationActive={false}>
                     {dailyPnl.map((entry, index) => (
-                      <Cell key={index} fill={entry.pnl >= 0 ? '#66d9cc' : '#ff6762'} />
+                      <Cell key={index} fill={entry.pnl >= 0 ? '#34d399' : '#e11d48'} />
                     ))}
                   </Bar>
                 </BarChart>

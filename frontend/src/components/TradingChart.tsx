@@ -75,8 +75,8 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
     // Create chart with dark theme
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#0f1419' },
-        textColor: '#8b919e',
+        background: { type: ColorType.Solid, color: '#0c0a09' },
+        textColor: '#78716c',
       },
       grid: {
         vertLines: { color: 'rgba(65, 71, 83, 0.15)' },
@@ -88,15 +88,15 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
         mode: CrosshairMode.Normal,
         vertLine: {
           width: 1,
-          color: '#a7c8ff',
+          color: '#fb923c',
           style: 2,
-          labelBackgroundColor: '#a7c8ff',
+          labelBackgroundColor: '#fb923c',
         },
         horzLine: {
           width: 1,
-          color: '#a7c8ff',
+          color: '#fb923c',
           style: 2,
-          labelBackgroundColor: '#a7c8ff',
+          labelBackgroundColor: '#fb923c',
         },
       },
       timeScale: {
@@ -131,12 +131,12 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
     // Add candlestick series with design tokens
     const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#1ea296',
-      downColor: '#ff6762',
-      borderUpColor: '#1ea296',
-      borderDownColor: '#ff6762',
-      wickUpColor: '#1ea296',
-      wickDownColor: '#ff6762',
+      upColor: '#059669',
+      downColor: '#e11d48',
+      borderUpColor: '#059669',
+      borderDownColor: '#e11d48',
+      wickUpColor: '#059669',
+      wickDownColor: '#e11d48',
     })
 
     seriesRef.current = candlestickSeries
@@ -207,7 +207,7 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
         return {
           time: timeValue as Time,
           position: trade.side === 'BUY' ? 'belowBar' as const : 'aboveBar' as const,
-          color: trade.side === 'BUY' ? '#1ea296' : '#ff6762',
+          color: trade.side === 'BUY' ? '#059669' : '#e11d48',
           shape: trade.side === 'BUY' ? 'arrowUp' as const : 'arrowDown' as const,
           text: `${trade.side} ${trade.quantity}@${trade.price.toFixed(2)}`,
           size: 2,

@@ -19,7 +19,7 @@ export function Sidebar() {
   const user = getStoredUser()
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 z-40 h-full w-64 border-r border-[#1b2025] bg-surface-container-low font-body antialiased">
+    <aside className="fixed left-0 top-0 bottom-0 z-40 h-full w-64 border-r border-outline-variant/20 bg-surface-container-low font-body antialiased">
       <div className="flex flex-col h-full">
         <div className="p-6 mb-2">
           <h1 className="text-lg font-bold tracking-tight text-white">Open Tradervue</h1>
@@ -42,8 +42,8 @@ export function Sidebar() {
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors duration-200',
                   isActive
-                    ? 'bg-blue-500/10 text-blue-400 border-l-2 border-blue-400'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border-l-2 border-transparent'
+                    ? 'bg-primary/10 text-primary border-l-2 border-primary'
+                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/50 border-l-2 border-transparent'
                 )}
               >
                 <Icon name={item.icon} />
@@ -53,7 +53,7 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-[#1b2025]">
+        <div className="p-4 border-t border-outline-variant/20">
           <div className="flex items-center gap-3 px-2">
             <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center">
               <Icon name="person" className="text-primary" />
@@ -68,16 +68,16 @@ export function Sidebar() {
                   className={cn(
                     'text-xs font-label transition-colors',
                     location.pathname === '/settings'
-                      ? 'text-blue-400'
-                      : 'text-slate-500 hover:text-slate-300'
+                      ? 'text-primary'
+                      : 'text-outline hover:text-on-surface-variant'
                   )}
                 >
                   Settings
                 </Link>
-                <span className="text-slate-600 text-xs">|</span>
+                <span className="text-outline-variant text-xs">|</span>
                 <button
                   onClick={logout}
-                  className="text-xs font-label text-slate-500 hover:text-slate-300 transition-colors"
+                  className="text-xs font-label text-outline hover:text-on-surface-variant transition-colors"
                 >
                   Logout
                 </button>
