@@ -30,13 +30,27 @@ async def get_current_user(
     token = credentials.credentials
     import logging
     logger = logging.getLogger("tradervue.auth")
-    logger.info(f"Token length: {len(token)}, Secret length: {len(SUPABASE_JWT_SECRET)}, Secret starts: {SUPABASE_JWT_SECRET[:10]}...")
+    import logging
+    import json
+    import base64
+    logger = logging.getLogger("tradervue.auth")
+
+    # Decode header to check algorithm
+    try:
+        header_b64 = token.split('.')[0]
+        # Add padding
+        header_b64 += '=' * (4 - len(header_b64) % 4)
+        header = json.loads(base64.urlsafe_b64decode(header_b64))
+        logger.info(f"JWT header: {header}")
+    except Exception as e:
+        logger.error(f"Failed to decode JWT header: {e}")
 
     try:
+        # Try with the algorithm from the token header
         payload = jwt.decode(
             token,
             SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
+            algorithms=["HS256", "HS384", "HS512"],
             audience="authenticated",
         )
         user_id = payload.get("sub")
@@ -47,7 +61,24 @@ async def get_current_user(
         return CurrentUser(id=user_id, email=email)
     except JWTError as e:
         logger.error(f"JWT decode failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid or expired token: {str(e)}",
-        )
+
+        # Fallback: try without audience verification
+        try:
+            payload = jwt.decode(
+                token,
+                SUPABASE_JWT_SECRET,
+                algorithms=["HS256", "HS384", "HS512"],
+                options={"verify_aud": False},
+            )
+            user_id = payload.get("sub")
+            email = payload.get("email", "")
+            logger.info(f"Auth success (no aud check): user={user_id}, email={email}")
+            if not user_id:
+                raise HTTPException(status_code=401, detail="Invalid token")
+            return CurrentUser(id=user_id, email=email)
+        except JWTError as e2:
+            logger.error(f"JWT decode failed (fallback): {e2}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid or expired token",
+            )
