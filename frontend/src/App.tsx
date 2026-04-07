@@ -10,6 +10,7 @@ import { Analysis } from '@/pages/Analysis'
 import { Statistics } from '@/pages/Statistics'
 import { Charts } from '@/pages/Charts'
 import { Journal } from '@/pages/Journal'
+import { Settings } from '@/pages/Settings'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/charts" element={<Charts />} />
           <Route path="/journal" element={<Journal />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </Layout>
     </BrowserRouter>

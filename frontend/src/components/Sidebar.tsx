@@ -58,7 +58,17 @@ export function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">Pro Account</p>
-              <p className="text-xs text-slate-500 font-label">Settings</p>
+              <Link
+                to="/settings"
+                className={cn(
+                  'text-xs font-label transition-colors',
+                  location.pathname === '/settings'
+                    ? 'text-blue-400'
+                    : 'text-slate-500 hover:text-slate-300'
+                )}
+              >
+                Settings
+              </Link>
             </div>
           </div>
         </div>
