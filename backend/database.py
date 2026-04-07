@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import DeclarativeBase
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./tradervue.db")
+print(f"[DATABASE] URL starts with: {DATABASE_URL[:30]}...", flush=True)
 
 # Handle various DATABASE_URL formats
 _is_postgres = False
@@ -24,6 +25,7 @@ if _is_postgres:
     ssl_context.verify_mode = ssl.CERT_NONE
     _connect_args = {"ssl": ssl_context}
 
+print(f"[DATABASE] is_postgres={_is_postgres}, final URL: {DATABASE_URL[:40]}...", flush=True)
 engine = create_async_engine(DATABASE_URL, echo=False, connect_args=_connect_args)
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
