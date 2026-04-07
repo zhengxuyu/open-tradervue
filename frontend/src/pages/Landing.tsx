@@ -31,12 +31,30 @@ export function Landing() {
 
   return (
     <div className="min-h-screen text-slate-900 overflow-x-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
-      {/* Animated gradient background */}
+      {/* Background: gradient + rising equity curve */}
       <div className="fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50/50 to-violet-50/50" />
         <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-400/10 blur-3xl" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-violet-400/10 blur-3xl" />
-        <div className="absolute top-[40%] left-[30%] w-[400px] h-[400px] rounded-full bg-emerald-400/8 blur-3xl" />
+        {/* Rising equity curve — spans full width, anchored to bottom */}
+        <svg className="absolute bottom-0 left-0 w-full h-[70%] opacity-[0.04]" viewBox="0 0 1400 600" preserveAspectRatio="none" fill="none">
+          <defs>
+            <linearGradient id="equityFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {/* Equity curve path: left-to-right, trending up with realistic pullbacks */}
+          <path
+            d="M0 550 C30 545, 50 540, 80 530 C110 520, 130 535, 160 525 C190 510, 210 515, 240 500 C270 485, 290 495, 320 480 C350 460, 370 470, 400 450 C430 430, 450 445, 480 420 C510 395, 530 410, 560 385 C590 360, 610 375, 640 350 C670 325, 690 340, 720 310 C750 280, 770 300, 800 275 C830 250, 850 265, 880 240 C910 215, 930 235, 960 210 C990 185, 1010 200, 1040 175 C1070 150, 1090 170, 1120 145 C1150 120, 1170 135, 1200 110 C1230 90, 1250 100, 1280 80 C1310 60, 1340 70, 1370 50 L1400 40 L1400 600 L0 600 Z"
+            fill="url(#equityFill)"
+          />
+          <path
+            d="M0 550 C30 545, 50 540, 80 530 C110 520, 130 535, 160 525 C190 510, 210 515, 240 500 C270 485, 290 495, 320 480 C350 460, 370 470, 400 450 C430 430, 450 445, 480 420 C510 395, 530 410, 560 385 C590 360, 610 375, 640 350 C670 325, 690 340, 720 310 C750 280, 770 300, 800 275 C830 250, 850 265, 880 240 C910 215, 930 235, 960 210 C990 185, 1010 200, 1040 175 C1070 150, 1090 170, 1120 145 C1150 120, 1170 135, 1200 110 C1230 90, 1250 100, 1280 80 C1310 60, 1340 70, 1370 50 L1400 40"
+            stroke="#10b981"
+            strokeWidth="3"
+          />
+        </svg>
       </div>
 
       {/* Glass Nav */}
@@ -368,7 +386,7 @@ export function Landing() {
             <span className="font-bold" style={{ fontFamily: "'Space Grotesk', monospace" }}>
               TradeJournal<span className="text-blue-600">.dev</span>
             </span>
-            <p className="text-sm text-slate-400 mt-1">Open source trading journal. AGPL-3.0.</p>
+            <p className="text-sm text-slate-400 mt-1">Open source trading journal. Free for non-commercial use.</p>
           </div>
           <div className="flex gap-6 text-sm text-slate-400">
             <a href="https://github.com/zhengxuyu/open-tradervue" target="_blank" rel="noopener noreferrer" className="hover:text-slate-700 transition-colors">GitHub</a>
