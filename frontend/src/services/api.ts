@@ -15,12 +15,12 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('tradervue_token')
-      localStorage.removeItem('tradervue_user')
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
+      const { supabase } = await import('./supabase')
+      await supabase.auth.signOut()
+      if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
+        window.location.href = '/'
       }
     }
     return Promise.reject(error)

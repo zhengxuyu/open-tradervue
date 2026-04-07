@@ -1,52 +1,86 @@
-import api from './api'
-
-const TOKEN_KEY = 'tradervue_token'
-const USER_KEY = 'tradervue_user'
+import { supabase } from './supabase'
 
 export interface AuthUser {
-  id: number
+  id: string
   email: string
   username: string
 }
 
-export async function login(email: string, password: string): Promise<AuthUser> {
-  const { data } = await api.post('/auth/login', {
+export async function loginWithGoogle(): Promise<void> {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+    },
+  })
+  if (error) throw error
+}
+
+export async function loginWithEmail(email: string, password: string): Promise<AuthUser> {
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
-    username: email,
     password,
   })
-  localStorage.setItem(TOKEN_KEY, data.access_token)
-
-  // Fetch user info
-  const user = await getMe()
-  localStorage.setItem(USER_KEY, JSON.stringify(user))
-  return user
+  if (error) throw error
+  return {
+    id: data.user.id,
+    email: data.user.email || '',
+    username: data.user.user_metadata?.username || data.user.email?.split('@')[0] || '',
+  }
 }
 
-export async function register(email: string, username: string, password: string): Promise<void> {
-  await api.post('/auth/register', { email, username, password })
+export async function registerWithEmail(email: string, username: string, password: string): Promise<void> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  })
+  if (error) throw error
 }
 
-export async function getMe(): Promise<AuthUser> {
-  const { data } = await api.get('/auth/me')
-  return data
-}
-
-export function logout(): void {
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(USER_KEY)
+export async function logout(): Promise<void> {
+  await supabase.auth.signOut()
   window.location.href = '/'
 }
 
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+export async function getSession() {
+  const { data } = await supabase.auth.getSession()
+  return data.session
 }
 
 export function getStoredUser(): AuthUser | null {
-  const raw = localStorage.getItem(USER_KEY)
-  return raw ? JSON.parse(raw) : null
+  // Synchronous check from localStorage (supabase stores session there)
+  const storageKey = `sb-awmvrbkqpadohwbddabn-auth-token`
+  const raw = localStorage.getItem(storageKey)
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    const user = parsed?.user
+    if (!user) return null
+    return {
+      id: user.id,
+      email: user.email || '',
+      username: user.user_metadata?.username || user.email?.split('@')[0] || '',
+    }
+  } catch {
+    return null
+  }
 }
 
 export function isAuthenticated(): boolean {
-  return !!getToken()
+  return !!getStoredUser()
+}
+
+export function getToken(): string | null {
+  const storageKey = `sb-awmvrbkqpadohwbddabn-auth-token`
+  const raw = localStorage.getItem(storageKey)
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed?.access_token || null
+  } catch {
+    return null
+  }
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { loginWithGoogle } from '@/services/auth'
 
 const screenshots = [
   { label: 'Dashboard', color: 'from-blue-500/20 to-cyan-500/10' },
@@ -122,6 +123,7 @@ export function Landing() {
 
               {/* Google OAuth button */}
               <button
+                onClick={() => loginWithGoogle()}
                 className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 rounded-xl py-3.5 px-4 font-medium text-slate-700 hover:bg-slate-50 hover:shadow-md transition-all shadow-sm"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
