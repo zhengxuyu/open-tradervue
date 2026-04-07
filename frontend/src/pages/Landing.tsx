@@ -92,13 +92,13 @@ export function Landing() {
               Open Source & Free
             </div>
             <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
-              Track Every Trade.{' '}
+              Build your trading system with{' '}
               <span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
-                Find Your Edge.
+                TradeJournal.dev
               </span>
             </h1>
             <p className="mt-6 text-lg text-slate-500 max-w-lg leading-relaxed">
-              Professional-grade trading analytics with market condition analysis, FIFO position tracking, and daily journaling. Self-host or use our cloud.
+              记录下你来时的路和去的方向。只有有了衡量，你才能找到方向。
             </p>
             <div className="mt-10 space-y-4">
               {[
