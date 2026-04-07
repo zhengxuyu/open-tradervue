@@ -83,6 +83,16 @@ async def health():
     return {"status": "healthy"}
 
 
+# Serve frontend static files in production
+import os as _os
+from pathlib import Path as _Path
+
+_frontend_dist = _Path(__file__).parent.parent / "frontend" / "dist"
+if _frontend_dist.is_dir():
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
+
+
 def main():
     import uvicorn
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
