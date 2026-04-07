@@ -157,28 +157,44 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Screenshot scroll wall */}
-      <section className="py-20 overflow-hidden relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/95 to-transparent" />
-        <div className="max-w-6xl mx-auto px-6 mb-12 text-center relative z-10">
-          <h2 className="text-3xl font-bold text-white">Built for Performance</h2>
-          <p className="mt-3 text-slate-400">Professional tools, zero cost.</p>
-        </div>
-        <div className="flex gap-4 h-[500px] overflow-hidden px-6 relative z-10">
-          {[col1, col2, col3, col4].map((col, colIdx) => (
-            <div key={colIdx} className="flex-1 overflow-hidden">
-              <div className={colIdx % 2 === 0 ? 'animate-scroll-up' : 'animate-scroll-down'}>
-                {[...col, ...col].map((s, i) => (
-                  <div
-                    key={`${colIdx}-${i}`}
-                    className={`bg-gradient-to-br ${s.color} backdrop-blur-sm rounded-2xl h-48 mb-4 flex items-center justify-center border border-white/10`}
-                  >
-                    <span className="text-white/50 text-lg font-medium">{s.label}</span>
+      {/* Quote Wall */}
+      <section className="py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-50/50 via-white to-slate-50/50" />
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
+          <h2 className="text-3xl font-bold text-center mb-4">Wisdom from the Masters</h2>
+          <p className="text-slate-400 text-center mb-16">The greatest traders all agree: journaling is the edge.</p>
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+            {[
+              { quote: "The goal of a successful trader is to make the best trades. Money is secondary.", author: "Alexander Elder", title: "Author, Trading for a Living" },
+              { quote: "Every battle is won before it's ever fought.", author: "Sun Tzu", title: "The Art of War" },
+              { quote: "In trading, the impossible happens about twice a year.", author: "Henri M. Simoes", title: "Hedge Fund Manager" },
+              { quote: "The most important quality for an investor is temperament, not intellect.", author: "Warren Buffett", title: "CEO, Berkshire Hathaway" },
+              { quote: "It's not whether you're right or wrong that's important, but how much money you make when you're right and how much you lose when you're wrong.", author: "George Soros", title: "Founder, Soros Fund" },
+              { quote: "Do more of what works and less of what doesn't.", author: "Steve Clark", title: "Hedge Fund Manager" },
+              { quote: "The key to trading success is emotional discipline. If intelligence were the key, there would be a lot more people making money.", author: "Victor Sperandeo", title: "Trader Vic" },
+              { quote: "Opportunities come infrequently. When it rains gold, put out the bucket, not the thimble.", author: "Warren Buffett", title: "CEO, Berkshire Hathaway" },
+              { quote: "Risk comes from not knowing what you're doing.", author: "Warren Buffett", title: "CEO, Berkshire Hathaway" },
+              { quote: "The trend is your friend until the end when it bends.", author: "Ed Seykota", title: "Pioneer of Systems Trading" },
+              { quote: "Plan your trade and trade your plan.", author: "Linda Raschke", title: "Professional Trader" },
+              { quote: "Cut your losses short and let your profits run.", author: "Jesse Livermore", title: "Legendary Speculator" },
+            ].map((q, i) => (
+              <div
+                key={i}
+                className="break-inside-avoid p-6 rounded-2xl bg-white/60 backdrop-blur-sm border border-white/80 shadow-[0_2px_16px_rgba(0,0,0,0.03)] hover:-translate-y-0.5 transition-all"
+              >
+                <p className="text-slate-700 leading-relaxed mb-4 italic">"{q.quote}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-violet-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                    {q.author[0]}
                   </div>
-                ))}
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{q.author}</p>
+                    <p className="text-xs text-slate-400">{q.title}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
