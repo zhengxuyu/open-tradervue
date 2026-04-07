@@ -98,14 +98,14 @@ export function Landing() {
               </span>
             </h1>
             <p className="mt-6 text-lg text-slate-500 max-w-lg leading-relaxed">
-              记录下你来时的路和去的方向。只有有了衡量，你才能找到方向。
+              Track where you've been and where you're going. You can't improve what you don't measure.
             </p>
             <div className="mt-10 space-y-4">
               {[
                 ['check_circle', 'Sharpe, Sortino, Kelly — metrics that $49/mo tools charge for'],
                 ['check_circle', '10+ analysis dimensions — by hour, day, symbol, market conditions'],
                 ['check_circle', 'P&L calendar heatmap — see your patterns at a glance'],
-                ['check_circle', 'Self-host with Docker — your data never leaves your server'],
+                ['check_circle', 'Need a free version? Build your own with our open-source code'],
               ].map(([icon, text]) => (
                 <div key={text} className="flex items-start gap-3">
                   <span className="material-symbols-outlined text-emerald-500 text-xl mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
