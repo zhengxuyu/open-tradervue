@@ -3,8 +3,13 @@ import ssl
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
+# Debug: print all env vars containing DATABASE
+for k, v in os.environ.items():
+    if "DATABASE" in k.upper() or "DB" in k.upper():
+        print(f"[ENV] {k}={v[:40]}...", flush=True)
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./tradervue.db")
-print(f"[DATABASE] URL starts with: {DATABASE_URL[:30]}...", flush=True)
+print(f"[DATABASE] Resolved URL: {DATABASE_URL[:50]}...", flush=True)
 
 # Handle various DATABASE_URL formats
 _is_postgres = False
