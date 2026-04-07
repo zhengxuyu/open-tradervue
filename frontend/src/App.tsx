@@ -13,13 +13,21 @@ import { Journal } from '@/pages/Journal'
 import { Settings } from '@/pages/Settings'
 import { Login } from '@/pages/Login'
 import { Register } from '@/pages/Register'
+import { Landing } from '@/pages/Landing'
 import { isAuthenticated } from '@/services/auth'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/" replace />
   }
   return <Layout>{children}</Layout>
+}
+
+function HomePage() {
+  if (isAuthenticated()) {
+    return <Layout><Dashboard /></Layout>
+  }
+  return <Landing />
 }
 
 function App() {
@@ -28,7 +36,8 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/landing" element={<Landing />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/trades" element={<PrivateRoute><Trades /></PrivateRoute>} />
         <Route path="/positions/daily" element={<PrivateRoute><DailyPositionDetail /></PrivateRoute>} />
         <Route path="/positions/:id" element={<PrivateRoute><PositionDetailPage /></PrivateRoute>} />
