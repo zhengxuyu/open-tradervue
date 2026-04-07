@@ -72,4 +72,4 @@ FastAPI auto-generates OpenAPI docs at `/docs` (Swagger UI) and `/redoc`.
 
 ## License
 
-MIT
+AGPL-3.0 — see [LICENSE](LICENSE)
