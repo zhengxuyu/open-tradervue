@@ -37,22 +37,22 @@ function App() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
-    })
-
-    // Listen for auth changes (OAuth callback, login, logout)
+    // Use onAuthStateChange as the single source of truth.
+    // INITIAL_SESSION fires after URL hash tokens are parsed (OAuth callback).
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only update on real auth events, not token refresh noise
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
-        setSession(session)
+      setSession(session)
+      if (event === 'INITIAL_SESSION') {
         setLoading(false)
       }
     })
 
-    return () => subscription.unsubscribe()
+    // Fallback: if INITIAL_SESSION never fires (shouldn't happen, but safety net)
+    const timeout = setTimeout(() => setLoading(false), 3000)
+
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [])
 
   if (loading) {

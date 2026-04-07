@@ -5,8 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 from ..database import get_db
-from ..auth import get_current_user
-from ..models.user import User
+from ..auth import get_current_user, CurrentUser
 from ..models.trade import Trade
 from ..schemas import (
     AnalysisSummary, SymbolAnalysis, DateAnalysis,
@@ -25,7 +24,7 @@ async def get_positions(
     symbol: Optional[str] = None,
     status: Optional[str] = Query(None, pattern="^(open|closed)$"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     service = AnalysisService()
     positions = await service.calculate_positions(db, symbol, user_id=current_user.id)
@@ -46,7 +45,7 @@ async def get_positions(
 async def get_position_detail(
     position_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     service = AnalysisService()
     detail = await service.get_position_detail(db, position_id, user_id=current_user.id)
@@ -92,7 +91,7 @@ async def get_position_detail(
 async def delete_position(
     position_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Delete a position and all its associated trades."""
     service = AnalysisService()
@@ -114,7 +113,7 @@ async def delete_position(
 async def delete_positions(
     position_ids: list[int] = Query(...),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Delete multiple positions and all their associated trades."""
     service = AnalysisService()
@@ -143,7 +142,7 @@ async def get_analysis_summary(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     service = AnalysisService()
     return await service.get_summary(db, start_date, end_date, user_id=current_user.id)
@@ -154,7 +153,7 @@ async def get_analysis_by_symbol(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     service = AnalysisService()
     return await service.get_by_symbol(db, start_date, end_date, user_id=current_user.id)
@@ -165,7 +164,7 @@ async def get_analysis_by_date(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     service = AnalysisService()
     return await service.get_by_date(db, start_date, end_date, user_id=current_user.id)
@@ -177,7 +176,7 @@ async def get_advanced_statistics(
     end_date: Optional[datetime] = None,
     symbol: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get advanced trading statistics with breakdowns by symbol, hour, day, holding time, etc."""
     service = StatisticsService()
@@ -188,7 +187,7 @@ async def get_advanced_statistics(
 async def fetch_market_data(
     symbols: list[str] = Query(None, description="Symbols to fetch. If empty, fetches for all traded symbols."),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Fetch and store market data from Alpha Vantage for the specified symbols."""
     # If no symbols provided, get all unique symbols from trades
@@ -213,7 +212,7 @@ async def fetch_market_data_for_symbol(
     symbol: str,
     force_refresh: bool = Query(False, description="Force refresh even if data exists"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Fetch and store market data for a specific symbol."""
     count = await market_data_service.fetch_and_store_market_data(db, symbol, force_refresh)

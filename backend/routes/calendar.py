@@ -6,8 +6,7 @@ from collections import defaultdict
 import calendar
 
 from ..database import get_db
-from ..auth import get_current_user
-from ..models.user import User
+from ..auth import get_current_user, CurrentUser
 from ..schemas import CalendarDay, MonthSummary, YearSummary
 from ..services.analysis import AnalysisService
 
@@ -19,7 +18,7 @@ async def get_daily_calendar(
     year: int = Query(..., ge=2000, le=2100),
     month: int = Query(..., ge=1, le=12),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     service = AnalysisService()
     positions = await service.calculate_positions(db, user_id=current_user.id)
@@ -61,7 +60,7 @@ async def get_daily_calendar(
 async def get_monthly_summary(
     year: int = Query(..., ge=2000, le=2100),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     service = AnalysisService()
     positions = await service.calculate_positions(db, user_id=current_user.id)
@@ -119,7 +118,7 @@ async def get_monthly_summary(
 @router.get("/yearly", response_model=list[YearSummary])
 async def get_yearly_summary(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     service = AnalysisService()
     positions = await service.calculate_positions(db, user_id=current_user.id)

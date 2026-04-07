@@ -4,8 +4,7 @@ from sqlalchemy import select
 from typing import Optional
 
 from ..database import get_db
-from ..auth import get_current_user
-from ..models.user import User
+from ..auth import get_current_user, CurrentUser
 from ..models.journal import Journal
 from ..schemas import (
     JournalCreate, JournalUpdate, JournalResponse, JournalWithTrades, PositionResponse
@@ -20,7 +19,7 @@ async def get_journals(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get all journal entries, ordered by date descending."""
     result = await db.execute(
@@ -33,7 +32,7 @@ async def get_journals(
 async def get_journal(
     date: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get journal entry for a specific date with associated trades."""
     result = await db.execute(select(Journal).where(Journal.date == date, Journal.user_id == current_user.id))
@@ -119,7 +118,7 @@ async def get_journal(
 async def create_journal(
     journal: JournalCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Create a new journal entry."""
     # Check if journal for this date already exists
@@ -160,7 +159,7 @@ async def update_journal(
     date: str,
     journal: JournalUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Update or create a journal entry for a specific date."""
     result = await db.execute(select(Journal).where(Journal.date == date, Journal.user_id == current_user.id))
@@ -214,7 +213,7 @@ async def update_journal(
 async def delete_journal(
     date: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
     """Delete a journal entry."""
     result = await db.execute(select(Journal).where(Journal.date == date, Journal.user_id == current_user.id))
