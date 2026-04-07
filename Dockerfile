@@ -9,6 +9,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY pyproject.toml README.md ./
 RUN uv sync --no-dev
 
+# Bust cache: 2026-04-07-v2
 # Copy backend + alembic
 COPY backend/ backend/
 COPY alembic/ alembic/
