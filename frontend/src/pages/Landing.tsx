@@ -137,16 +137,32 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Quote River — horizontally scrolling */}
-      <section className="py-16 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-50/50 via-white to-slate-50/50" />
+      {/* Quote River — slow horizontal scroll with candlestick background */}
+      <section className="py-20 relative overflow-hidden">
+        {/* Background: faded candlestick chart pattern */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-50 via-white to-slate-50" />
+        <svg className="absolute inset-0 w-full h-full opacity-[0.04]" viewBox="0 0 1200 400" preserveAspectRatio="none">
+          {/* Stylized candlestick silhouettes */}
+          {[80,160,240,320,400,480,560,640,720,800,880,960,1040,1120].map((x, i) => {
+            const h = [180,120,200,90,160,220,110,170,140,190,130,210,100,150][i]
+            const y = 200 - h/2
+            const isUp = i % 3 !== 0
+            return (
+              <g key={i}>
+                <line x1={x} y1={y - 30} x2={x} y2={y + h + 30} stroke={isUp ? '#10b981' : '#ef4444'} strokeWidth="1.5" />
+                <rect x={x - 12} y={y} width="24" height={h} rx="2" fill={isUp ? '#10b981' : '#ef4444'} />
+              </g>
+            )
+          })}
+        </svg>
+
         <div className="relative z-10">
           <h2 className="text-3xl font-bold text-center mb-4">Wisdom from the Masters</h2>
-          <p className="text-slate-400 text-center mb-12">The greatest traders all agree: discipline is the edge.</p>
+          <p className="text-slate-400 text-center mb-14">The greatest traders all agree: discipline is the edge.</p>
 
-          {/* Row 1 — scrolls left */}
-          <div className="mb-4 overflow-hidden">
-            <div className="flex gap-4 animate-[scroll-left_60s_linear_infinite] w-max">
+          {/* Row 1 — scrolls left, slower */}
+          <div className="mb-5 overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
+            <div className="flex gap-5 animate-[scroll-left_120s_linear_infinite] w-max">
               {[...Array(2)].flatMap(() => [
                 { q: "Money is made by sitting, not trading.", a: "Jesse Livermore" },
                 { q: "The trend is your friend until the end when it bends.", a: "Ed Seykota" },
@@ -156,17 +172,17 @@ export function Landing() {
                 { q: "The elements of good trading are: cutting losses, cutting losses, and cutting losses.", a: "Ed Seykota" },
                 { q: "Markets are never wrong. Opinions often are.", a: "Jesse Livermore" },
               ]).map((q, i) => (
-                <div key={i} className="flex-shrink-0 w-[400px] p-5 rounded-2xl bg-white/60 backdrop-blur-sm border border-white/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
-                  <p className="text-slate-700 text-sm leading-relaxed italic mb-3">"{q.q}"</p>
-                  <p className="text-xs font-semibold text-slate-500">— {q.a}</p>
+                <div key={i} className="flex-shrink-0 w-[380px] p-5 rounded-2xl bg-white/40 backdrop-blur-md border border-white/50 shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
+                  <p className="text-slate-600 text-sm leading-relaxed italic mb-3">"{q.q}"</p>
+                  <p className="text-xs font-semibold text-slate-400">— {q.a}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Row 2 — scrolls right */}
-          <div className="overflow-hidden">
-            <div className="flex gap-4 animate-[scroll-right_55s_linear_infinite] w-max">
+          {/* Row 2 — scrolls right, slightly different speed */}
+          <div className="overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
+            <div className="flex gap-5 animate-[scroll-right_110s_linear_infinite] w-max">
               {[...Array(2)].flatMap(() => [
                 { q: "It's not whether you're right or wrong, but how much you make when you're right and lose when you're wrong.", a: "George Soros" },
                 { q: "Everyday I assume every position I have is wrong.", a: "Paul Tudor Jones" },
@@ -176,9 +192,9 @@ export function Landing() {
                 { q: "The key to trading success is emotional discipline.", a: "Victor Sperandeo" },
                 { q: "A loss never bothers me after I take it. I forget it overnight.", a: "Jesse Livermore" },
               ]).map((q, i) => (
-                <div key={i} className="flex-shrink-0 w-[420px] p-5 rounded-2xl bg-white/60 backdrop-blur-sm border border-white/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
-                  <p className="text-slate-700 text-sm leading-relaxed italic mb-3">"{q.q}"</p>
-                  <p className="text-xs font-semibold text-slate-500">— {q.a}</p>
+                <div key={i} className="flex-shrink-0 w-[400px] p-5 rounded-2xl bg-white/40 backdrop-blur-md border border-white/50 shadow-[0_2px_20px_rgba(0,0,0,0.02)]">
+                  <p className="text-slate-600 text-sm leading-relaxed italic mb-3">"{q.q}"</p>
+                  <p className="text-xs font-semibold text-slate-400">— {q.a}</p>
                 </div>
               ))}
             </div>
