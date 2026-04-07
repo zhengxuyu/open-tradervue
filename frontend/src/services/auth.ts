@@ -74,13 +74,37 @@ export function isAuthenticated(): boolean {
 }
 
 export function getToken(): string | null {
-  const storageKey = `sb-awmvrbkqpadohwbddabn-auth-token`
-  const raw = localStorage.getItem(storageKey)
-  if (!raw) return null
-  try {
-    const parsed = JSON.parse(raw)
-    return parsed?.access_token || null
-  } catch {
-    return null
+  // Try multiple possible localStorage keys for Supabase session
+  const keys = [
+    'sb-awmvrbkqpadohwbddabn-auth-token',
+    'sb-awmvrbkqpadohwbddabn-auth-token-code-verifier',
+  ]
+
+  // Also scan for any sb-* key
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith('sb-') && key.includes('auth-token') && !key.includes('verifier')) {
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      try {
+        const parsed = JSON.parse(raw)
+        if (parsed?.access_token) return parsed.access_token
+      } catch {
+        continue
+      }
+    }
   }
+
+  // Fallback: check the known key
+  for (const storageKey of keys) {
+    const raw = localStorage.getItem(storageKey)
+    if (!raw) continue
+    try {
+      const parsed = JSON.parse(raw)
+      if (parsed?.access_token) return parsed.access_token
+    } catch {
+      continue
+    }
+  }
+  return null
 }
