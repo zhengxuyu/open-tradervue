@@ -162,7 +162,7 @@ export function Landing() {
 
           {/* Row 1 — scrolls left, slower */}
           <div className="mb-5 overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
-            <div className="flex gap-5 animate-[scroll-left_120s_linear_infinite] w-max">
+            <div className="flex gap-5 animate-[scroll-left_240s_linear_infinite] w-max">
               {[...Array(2)].flatMap(() => [
                 { q: "Money is made by sitting, not trading.", a: "Jesse Livermore" },
                 { q: "The trend is your friend until the end when it bends.", a: "Ed Seykota" },
@@ -182,7 +182,7 @@ export function Landing() {
 
           {/* Row 2 — scrolls right, slightly different speed */}
           <div className="overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
-            <div className="flex gap-5 animate-[scroll-right_110s_linear_infinite] w-max">
+            <div className="flex gap-5 animate-[scroll-right_220s_linear_infinite] w-max">
               {[...Array(2)].flatMap(() => [
                 { q: "It's not whether you're right or wrong, but how much you make when you're right and lose when you're wrong.", a: "George Soros" },
                 { q: "Everyday I assume every position I have is wrong.", a: "Paul Tudor Jones" },
