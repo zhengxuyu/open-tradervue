@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Card, CardContent } from '@/components/Card'
-import { Button } from '@/components/Button'
+import { TopAppBar } from '@/components/TopAppBar'
+import { Icon } from '@/components/Icon'
 import { TradingViewWidget } from '@/components/TradingViewWidget'
 import { getPositions, getAnalysisBySymbol, type SymbolAnalysis, type Position } from '@/services/api'
-import { Search } from 'lucide-react'
-import { formatCurrency, cn, getPnLColor } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
+import { PnLValue, SideBadge } from '@/components/Badge'
 
 export function Charts() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -39,7 +39,6 @@ export function Charts() {
     setActiveSymbol(sym)
     setSearchParams({ symbol: sym })
 
-    // Fetch trades for this symbol
     try {
       const positions = await getPositions({ symbol: sym })
       setTrades(positions)
@@ -59,110 +58,130 @@ export function Charts() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Chart Analysis</h1>
-        <p className="text-gray-500 mt-1">View K-line charts with TradingView</p>
-      </div>
-
-      <Card>
-        <CardContent className="py-4">
-          <form onSubmit={handleSearch} className="flex gap-4">
-            <div className="flex-1">
+    <div className="space-y-0">
+      <TopAppBar
+        title="Charts"
+        actions={
+          <form onSubmit={handleSearch} className="flex items-center gap-2">
+            <div className="relative">
+              <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]" />
               <input
                 type="text"
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                placeholder="Enter symbol (e.g., AAPL, TSLA, MSFT)"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Symbol..."
+                className="w-48 pl-9 pr-3 py-1.5 bg-surface-container-low border border-outline-variant/10 rounded-lg text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
-            <Button type="submit" disabled={loading || !symbol}>
-              <Search className="h-4 w-4 mr-2" />
-              {loading ? 'Loading...' : 'Load Chart'}
-            </Button>
+            <button
+              type="submit"
+              disabled={loading || !symbol}
+              className="px-4 py-1.5 bg-primary text-on-primary text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-40 transition-colors"
+            >
+              {loading ? 'Loading...' : 'Load'}
+            </button>
           </form>
+        }
+      />
 
-          {symbols.length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-2">Your traded symbols:</p>
-              <div className="flex flex-wrap gap-2">
-                {symbols.map(s => (
-                  <button
-                    key={s.symbol}
-                    onClick={() => {
-                      setSymbol(s.symbol)
-                      loadSymbol(s.symbol)
-                    }}
-                    className={cn(
-                      'px-3 py-1 text-sm rounded-full transition-colors',
-                      activeSymbol === s.symbol
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    )}
-                  >
-                    {s.symbol}
-                  </button>
-                ))}
+      <div className="px-6 pt-4 space-y-4">
+        {/* Symbol chips */}
+        {symbols.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {symbols.map(s => (
+              <button
+                key={s.symbol}
+                onClick={() => {
+                  setSymbol(s.symbol)
+                  loadSymbol(s.symbol)
+                }}
+                className={cn(
+                  'px-3 py-1.5 text-xs font-medium rounded-full transition-colors',
+                  activeSymbol === s.symbol
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container text-outline hover:text-on-surface hover:bg-surface-container-high'
+                )}
+              >
+                {s.symbol}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {activeSymbol && (
+          <>
+            {/* Technical info ribbon */}
+            <div className="flex items-center gap-6 px-4 py-3 bg-surface-container rounded-xl">
+              <div className="flex items-center gap-2">
+                <Icon name="candlestick_chart" className="text-primary text-[20px]" />
+                <span className="text-on-surface font-bold text-sm">{activeSymbol}</span>
+              </div>
+              <div className="text-[10px] font-label uppercase tracking-widest text-outline">
+                {trades.length} position{trades.length !== 1 ? 's' : ''} found
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {activeSymbol && (
-        <div className="space-y-4">
-          {/* TradingView Chart */}
-          <TradingViewWidget
-            symbol={activeSymbol}
-            defaultInterval="1"
-            theme="dark"
-            defaultHeight={600}
-          />
+            {/* Main chart area */}
+            <TradingViewWidget
+              symbol={activeSymbol}
+              defaultInterval="1"
+              theme="dark"
+              defaultHeight={600}
+            />
 
-          {/* Trade History for this symbol */}
-          {trades.length > 0 && (
-            <Card>
-              <CardContent className="py-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Your {activeSymbol} Trades ({trades.length})
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+            {/* Bottom panel: trades table */}
+            {trades.length > 0 && (
+              <div className="bg-surface-container rounded-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-outline-variant/10">
+                  <h3 className="text-sm font-semibold text-on-surface">
+                    {activeSymbol} Positions
+                    <span className="ml-2 text-[10px] font-label text-outline uppercase tracking-wider">
+                      {trades.length} total
+                    </span>
+                  </h3>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-surface-container-low text-[10px] font-label uppercase tracking-widest text-outline sticky top-0">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Entry</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Exit</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">P&L</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Entry Time</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Exit Time</th>
+                        <th className="px-6 py-3 font-medium">Status</th>
+                        <th className="px-6 py-3 font-medium text-right">Qty</th>
+                        <th className="px-6 py-3 font-medium text-right">Entry</th>
+                        <th className="px-6 py-3 font-medium text-right">Exit</th>
+                        <th className="px-6 py-3 font-medium text-right">P&L</th>
+                        <th className="px-6 py-3 font-medium">Entry Time</th>
+                        <th className="px-6 py-3 font-medium">Exit Time</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-outline-variant/10">
                       {trades.map((trade) => (
-                        <tr key={trade.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-2">
+                        <tr key={trade.id} className="hover:bg-surface-container-high transition-colors">
+                          <td className="px-6 py-3">
                             <span className={cn(
-                              'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                              trade.status === 'open' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                              'inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full',
+                              trade.status === 'open'
+                                ? 'bg-primary/10 text-primary'
+                                : 'bg-surface-variant text-on-surface-variant'
                             )}>
                               {trade.status.toUpperCase()}
                             </span>
                           </td>
-                          <td className="px-4 py-2 text-sm text-right">{trade.quantity}</td>
-                          <td className="px-4 py-2 text-sm text-right">{formatCurrency(trade.entry_price)}</td>
-                          <td className="px-4 py-2 text-sm text-right">
+                          <td className="px-6 py-3 text-xs font-data text-on-surface text-right">{trade.quantity}</td>
+                          <td className="px-6 py-3 text-xs font-data text-on-surface text-right">{formatCurrency(trade.entry_price)}</td>
+                          <td className="px-6 py-3 text-xs font-data text-on-surface text-right">
                             {trade.exit_price ? formatCurrency(trade.exit_price) : '-'}
                           </td>
-                          <td className={cn('px-4 py-2 text-sm font-medium text-right', trade.pnl !== null ? getPnLColor(trade.pnl) : '')}>
-                            {trade.pnl !== null ? formatCurrency(trade.pnl) : '-'}
+                          <td className="px-6 py-3 text-right">
+                            {trade.pnl !== null ? (
+                              <PnLValue value={trade.pnl} className="text-xs font-data" />
+                            ) : (
+                              <span className="text-xs text-outline">-</span>
+                            )}
                           </td>
-                          <td className="px-4 py-2 text-sm text-gray-600">
+                          <td className="px-6 py-3 text-xs text-outline">
                             {new Date(trade.entry_time).toLocaleString()}
                           </td>
-                          <td className="px-4 py-2 text-sm text-gray-600">
+                          <td className="px-6 py-3 text-xs text-outline">
                             {trade.exit_time ? new Date(trade.exit_time).toLocaleString() : '-'}
                           </td>
                         </tr>
@@ -170,22 +189,21 @@ export function Charts() {
                     </tbody>
                   </table>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
+              </div>
+            )}
+          </>
+        )}
 
-      {!activeSymbol && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-gray-500">Enter a symbol above to view its TradingView chart</p>
-            <p className="text-sm text-gray-400 mt-2">
-              Full TradingView features: Drawing tools, indicators, multiple timeframes
+        {!activeSymbol && (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <Icon name="candlestick_chart" className="text-outline/30 text-6xl mb-4" />
+            <p className="text-on-surface font-medium">Enter a symbol to view its chart</p>
+            <p className="text-outline text-sm mt-1">
+              Full TradingView features: drawing tools, indicators, multiple timeframes
             </p>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

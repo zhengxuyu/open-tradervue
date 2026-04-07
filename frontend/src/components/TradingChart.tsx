@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { createChart, ColorType, CrosshairMode, type IChartApi, type ISeriesApi, type CandlestickData, type Time, type SeriesMarker } from 'lightweight-charts'
 import type { KlineData } from '@/services/api'
 import { getKline } from '@/services/api'
+import { Icon } from './Icon'
 
 interface TradeMarker {
   id: number
@@ -21,12 +22,12 @@ interface TradingChartProps {
 }
 
 const INTERVALS = [
-  { value: '1min', label: '1分钟' },
-  { value: '5min', label: '5分钟' },
-  { value: '15min', label: '15分钟' },
-  { value: '30min', label: '30分钟' },
-  { value: '60min', label: '1小时' },
-  { value: 'daily', label: '日线' },
+  { value: '1min', label: '1m' },
+  { value: '5min', label: '5m' },
+  { value: '15min', label: '15m' },
+  { value: '30min', label: '30m' },
+  { value: '60min', label: '1H' },
+  { value: 'daily', label: 'D' },
 ]
 
 export function TradingChart({ symbol, klines: initialKlines, trades = [], defaultInterval = '5min', defaultHeight = 500, minHeight = 300 }: TradingChartProps) {
@@ -71,15 +72,15 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
     const containerHeight = isFullscreen ? window.innerHeight - 120 : height
 
-    // Create chart with interactive options
+    // Create chart with dark theme
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#1a1a2e' },
-        textColor: '#d1d5db',
+        background: { type: ColorType.Solid, color: '#0f1419' },
+        textColor: '#8b919e',
       },
       grid: {
-        vertLines: { color: '#2d2d44' },
-        horzLines: { color: '#2d2d44' },
+        vertLines: { color: 'rgba(65, 71, 83, 0.15)' },
+        horzLines: { color: 'rgba(65, 71, 83, 0.15)' },
       },
       width: chartContainerRef.current.clientWidth,
       height: containerHeight,
@@ -87,27 +88,27 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
         mode: CrosshairMode.Normal,
         vertLine: {
           width: 1,
-          color: '#6366f1',
+          color: '#a7c8ff',
           style: 2,
-          labelBackgroundColor: '#6366f1',
+          labelBackgroundColor: '#a7c8ff',
         },
         horzLine: {
           width: 1,
-          color: '#6366f1',
+          color: '#a7c8ff',
           style: 2,
-          labelBackgroundColor: '#6366f1',
+          labelBackgroundColor: '#a7c8ff',
         },
       },
       timeScale: {
         timeVisible: true,
         secondsVisible: interval === '1min',
-        borderColor: '#2d2d44',
+        borderColor: 'rgba(65, 71, 83, 0.15)',
         rightOffset: 10,
         barSpacing: 8,
         minBarSpacing: 2,
       },
       rightPriceScale: {
-        borderColor: '#2d2d44',
+        borderColor: 'rgba(65, 71, 83, 0.15)',
         scaleMargins: {
           top: 0.1,
           bottom: 0.2,
@@ -128,21 +129,20 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
     chartRef.current = chart
 
-    // Add candlestick series
+    // Add candlestick series with design tokens
     const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#22c55e',
-      downColor: '#ef4444',
-      borderUpColor: '#22c55e',
-      borderDownColor: '#ef4444',
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
+      upColor: '#1ea296',
+      downColor: '#ff6762',
+      borderUpColor: '#1ea296',
+      borderDownColor: '#ff6762',
+      wickUpColor: '#1ea296',
+      wickDownColor: '#ff6762',
     })
 
     seriesRef.current = candlestickSeries
 
     // Prepare and set chart data
     const chartData: CandlestickData<Time>[] = klines.map(k => {
-      // For intraday data, use full timestamp; for daily, use date only
       const timeValue = interval === 'daily'
         ? k.timestamp.split('T')[0]
         : Math.floor(new Date(k.timestamp).getTime() / 1000)
@@ -158,9 +158,9 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
     candlestickSeries.setData(chartData)
 
-    // Add volume series
+    // Add volume series with themed colors
     const volumeSeries = chart.addHistogramSeries({
-      color: '#6366f1',
+      color: 'rgba(30, 162, 150, 0.3)',
       priceFormat: {
         type: 'volume',
       },
@@ -182,7 +182,7 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
       return {
         time: timeValue as Time,
         value: k.volume,
-        color: k.close >= k.open ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)',
+        color: k.close >= k.open ? 'rgba(30, 162, 150, 0.3)' : 'rgba(255, 103, 98, 0.3)',
       }
     })
 
@@ -190,7 +190,6 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
     // Add markers for trades
     if (trades.length > 0) {
-      // Floor trade time to the start of the interval period
       const intervalSeconds: Record<string, number> = {
         '1min': 60,
         '5min': 300,
@@ -208,14 +207,13 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
         return {
           time: timeValue as Time,
           position: trade.side === 'BUY' ? 'belowBar' as const : 'aboveBar' as const,
-          color: trade.side === 'BUY' ? '#22c55e' : '#ef4444',
+          color: trade.side === 'BUY' ? '#1ea296' : '#ff6762',
           shape: trade.side === 'BUY' ? 'arrowUp' as const : 'arrowDown' as const,
           text: `${trade.side} ${trade.quantity}@${trade.price.toFixed(2)}`,
           size: 2,
         }
       })
 
-      // Sort markers by time
       markers.sort((a, b) => {
         const aTime = typeof a.time === 'number' ? a.time : new Date(a.time as string).getTime()
         const bTime = typeof b.time === 'number' ? b.time : new Date(b.time as string).getTime()
@@ -225,12 +223,11 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
       candlestickSeries.setMarkers(markers)
     }
 
-    // Focus on first buy trade if exists, otherwise fit all content
+    // Focus on first buy trade if exists
     const firstBuyTrade = trades.find(t => t.side === 'BUY')
     if (firstBuyTrade && chartData.length > 0) {
       const buyTimestamp = Math.floor(new Date(firstBuyTrade.time).getTime() / 1000)
 
-      // Find the closest kline to the buy time
       let buyIndex = -1
       let minDiff = Infinity
       chartData.forEach((d, idx) => {
@@ -243,7 +240,6 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
       })
 
       if (buyIndex >= 0) {
-        // Show range around the buy point (about 50 bars before and after)
         const barsToShow = 50
         const from = Math.max(0, buyIndex - barsToShow)
         const to = Math.min(chartData.length - 1, buyIndex + barsToShow)
@@ -292,7 +288,7 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
     }
   }
 
-  // Resize handlers - vertical
+  // Resize handler
   const handleVerticalResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     setIsResizing(true)
@@ -316,47 +312,23 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
     document.addEventListener('mouseup', handleMouseUp)
   }, [height, minHeight])
 
-  // Resize handlers - diagonal (corner)
-  const handleDiagonalResize = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsResizing(true)
-
-    const startY = e.clientY
-    const startHeight = height
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaY = moveEvent.clientY - startY
-      const newHeight = Math.max(minHeight, startHeight + deltaY)
-      setHeight(newHeight)
-    }
-
-    const handleMouseUp = () => {
-      setIsResizing(false)
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }, [height, minHeight])
-
   return (
-    <div className={`bg-[#1a1a2e] rounded-lg border border-gray-700 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+    <div className={`bg-surface rounded-xl border border-outline-variant/10 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant/10 bg-surface-container">
         <div className="flex items-center gap-4">
-          <h3 className="text-lg font-semibold text-white">{symbol}</h3>
+          <h3 className="text-sm font-semibold text-on-surface">{symbol}</h3>
 
           {/* Interval Selector */}
-          <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-1">
+          <div className="flex items-center gap-0.5 bg-surface-container-low rounded-lg p-1">
             {INTERVALS.map((int) => (
               <button
                 key={int.value}
                 onClick={() => setInterval(int.value)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                className={`px-3 py-1 text-[11px] font-medium rounded-md transition-colors ${
                   interval === int.value
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                    ? 'bg-primary text-on-primary'
+                    : 'text-outline hover:text-on-surface hover:bg-surface-container-high'
                 }`}
               >
                 {int.label}
@@ -367,13 +339,13 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
         <div className="flex items-center gap-2">
           {/* Legend */}
-          <div className="flex items-center gap-3 text-xs text-gray-400 mr-4">
+          <div className="flex items-center gap-3 text-[10px] font-label text-outline mr-3">
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-green-500 rounded" />
+              <div className="w-2.5 h-2.5 bg-secondary-container rounded-sm" />
               <span>Buy</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-500 rounded" />
+              <div className="w-2.5 h-2.5 bg-tertiary-container rounded-sm" />
               <span>Sell</span>
             </div>
           </div>
@@ -381,17 +353,19 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
           {/* Reset Zoom */}
           <button
             onClick={resetZoom}
-            className="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+            className="p-1.5 text-outline hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-colors"
+            title="Reset zoom"
           >
-            Reset
+            <Icon name="fit_screen" className="text-[18px]" />
           </button>
 
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
-            className="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+            className="p-1.5 text-outline hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-colors"
+            title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >
-            {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            <Icon name={isFullscreen ? 'fullscreen_exit' : 'fullscreen'} className="text-[18px]" />
           </button>
         </div>
       </div>
@@ -399,8 +373,8 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
       {/* Chart Container */}
       <div className="relative">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a2e] bg-opacity-80 z-10">
-            <div className="text-gray-400">Loading chart data...</div>
+          <div className="absolute inset-0 flex items-center justify-center bg-surface/80 z-10">
+            <div className="text-outline text-sm">Loading chart data...</div>
           </div>
         )}
         <div ref={chartContainerRef} />
@@ -408,19 +382,19 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
       {/* Trade Markers Legend */}
       {trades.length > 0 && (
-        <div className="px-4 py-3 border-t border-gray-700">
-          <p className="text-xs font-medium text-gray-400 mb-2">Trade Executions:</p>
+        <div className="px-4 py-3 border-t border-outline-variant/10">
+          <p className="text-[10px] font-label uppercase tracking-widest text-outline mb-2">Trade Executions</p>
           <div className="flex flex-wrap gap-2">
             {[...trades].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()).map(trade => (
               <span
                 key={trade.id}
-                className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                className={`inline-flex items-center px-2 py-1 rounded text-[11px] font-medium ${
                   trade.side === 'BUY'
-                    ? 'bg-green-900/50 text-green-400 border border-green-700'
-                    : 'bg-red-900/50 text-red-400 border border-red-700'
+                    ? 'bg-secondary-container/10 text-secondary-container border border-secondary-container/20'
+                    : 'bg-tertiary-container/10 text-tertiary-container border border-tertiary-container/20'
                 }`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${trade.side === 'BUY' ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${trade.side === 'BUY' ? 'bg-secondary-container' : 'bg-tertiary-container'}`} />
                 {trade.side} {trade.quantity} @ ${trade.price.toFixed(2)}
               </span>
             ))}
@@ -428,41 +402,15 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
         </div>
       )}
 
-      {/* Instructions */}
-      <div className="px-4 py-2 border-t border-gray-700 text-xs text-gray-500">
-        <span className="mr-4">🖱️ Drag to pan</span>
-        <span className="mr-4">⚲ Scroll to zoom</span>
-        <span>📏 Drag edges to scale</span>
-      </div>
-
-      {/* Resize Handle - Bottom */}
+      {/* Resize Handle */}
       <div className="relative">
         <div
           onMouseDown={handleVerticalResize}
-          className={`h-3 cursor-ns-resize flex items-center justify-center transition-colors ${
-            isResizing ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-gray-700'
+          className={`h-2.5 cursor-ns-resize flex items-center justify-center transition-colors ${
+            isResizing ? 'bg-primary/20' : 'bg-surface-container hover:bg-surface-container-high'
           }`}
         >
-          <div className="w-12 h-1 bg-gray-600 rounded-full" />
-        </div>
-
-        {/* Diagonal Resize Handle - Bottom Right Corner */}
-        <div
-          onMouseDown={handleDiagonalResize}
-          className={`absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-end justify-end ${
-            isResizing ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-300'
-          }`}
-          title="Drag to resize"
-        >
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 10 10"
-            fill="currentColor"
-            className="mr-0.5 mb-0.5"
-          >
-            <path d="M9 9H7v-2h2v2zm0-4H5v-2h2v2h2v2zm0-4H3v-2h2v2h2v2h2v2z" />
-          </svg>
+          <div className="w-10 h-0.5 bg-outline-variant/30 rounded-full" />
         </div>
       </div>
     </div>

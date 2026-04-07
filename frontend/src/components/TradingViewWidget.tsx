@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, memo, useCallback } from 'react'
+import { Icon } from './Icon'
 
 interface TradingViewWidgetProps {
   symbol: string
@@ -15,13 +16,13 @@ declare global {
 }
 
 const INTERVALS = [
-  { value: '1', label: '1分' },
-  { value: '5', label: '5分' },
-  { value: '15', label: '15分' },
-  { value: '30', label: '30分' },
-  { value: '60', label: '1时' },
-  { value: 'D', label: '日线' },
-  { value: 'W', label: '周线' },
+  { value: '1', label: '1m' },
+  { value: '5', label: '5m' },
+  { value: '15', label: '15m' },
+  { value: '30', label: '30m' },
+  { value: '60', label: '1H' },
+  { value: 'D', label: 'D' },
+  { value: 'W', label: 'W' },
 ]
 
 function TradingViewWidgetComponent({
@@ -69,10 +70,10 @@ function TradingViewWidgetComponent({
         symbol: currentSymbol,
         interval: interval,
         timezone: 'Asia/Shanghai',
-        theme: theme,
+        theme: 'dark',
         style: '1', // Candlestick
         locale: 'zh_CN',
-        toolbar_bg: theme === 'dark' ? '#1e1e2d' : '#f1f3f6',
+        toolbar_bg: '#0f1419',
         enable_publishing: false,
         allow_symbol_change: true,
         save_image: true,
@@ -96,16 +97,22 @@ function TradingViewWidgetComponent({
           'save_chart_properties_to_local_storage',
         ],
         overrides: {
-          'mainSeriesProperties.candleStyle.upColor': '#22c55e',
-          'mainSeriesProperties.candleStyle.downColor': '#ef4444',
-          'mainSeriesProperties.candleStyle.borderUpColor': '#22c55e',
-          'mainSeriesProperties.candleStyle.borderDownColor': '#ef4444',
-          'mainSeriesProperties.candleStyle.wickUpColor': '#22c55e',
-          'mainSeriesProperties.candleStyle.wickDownColor': '#ef4444',
+          'paneProperties.background': '#0f1419',
+          'paneProperties.backgroundType': 'solid',
+          'paneProperties.vertGridProperties.color': 'rgba(65, 71, 83, 0.15)',
+          'paneProperties.horzGridProperties.color': 'rgba(65, 71, 83, 0.15)',
+          'mainSeriesProperties.candleStyle.upColor': '#1ea296',
+          'mainSeriesProperties.candleStyle.downColor': '#ff6762',
+          'mainSeriesProperties.candleStyle.borderUpColor': '#1ea296',
+          'mainSeriesProperties.candleStyle.borderDownColor': '#ff6762',
+          'mainSeriesProperties.candleStyle.wickUpColor': '#1ea296',
+          'mainSeriesProperties.candleStyle.wickDownColor': '#ff6762',
+          'scalesProperties.textColor': '#8b919e',
+          'scalesProperties.lineColor': 'rgba(65, 71, 83, 0.15)',
         },
         loading_screen: {
-          backgroundColor: theme === 'dark' ? '#1e1e2d' : '#ffffff',
-          foregroundColor: theme === 'dark' ? '#6366f1' : '#2962FF',
+          backgroundColor: '#0f1419',
+          foregroundColor: '#a7c8ff',
         },
       })
     }
@@ -158,49 +165,25 @@ function TradingViewWidgetComponent({
     document.addEventListener('mouseup', handleMouseUp)
   }, [height, minHeight])
 
-  // Resize handlers - diagonal (corner)
-  const handleDiagonalResize = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsResizing(true)
-
-    const startY = e.clientY
-    const startHeight = height
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaY = moveEvent.clientY - startY
-      const newHeight = Math.max(minHeight, startHeight + deltaY)
-      setHeight(newHeight)
-    }
-
-    const handleMouseUp = () => {
-      setIsResizing(false)
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }, [height, minHeight])
-
   return (
-    <div className="rounded-lg overflow-hidden border border-gray-700 bg-[#1e1e2d]">
+    <div className="rounded-xl overflow-hidden border border-outline-variant/10 bg-surface">
       {/* Custom Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700 bg-[#1e1e2d]">
-        <div className="flex items-center gap-2">
-          <span className="text-white font-semibold">{currentSymbol}</span>
-          <span className="text-gray-500 text-sm">TradingView</span>
+      <div className="flex items-center justify-between px-4 py-2 border-b border-outline-variant/10 bg-surface-container">
+        <div className="flex items-center gap-3">
+          <span className="text-on-surface font-semibold text-sm">{currentSymbol}</span>
+          <span className="text-outline text-[10px] font-label uppercase tracking-wider">TradingView</span>
         </div>
 
         {/* Interval Selector */}
-        <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-1">
+        <div className="flex items-center gap-0.5 bg-surface-container-low rounded-lg p-1">
           {INTERVALS.map((int) => (
             <button
               key={int.value}
               onClick={() => handleIntervalChange(int.value)}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+              className={`px-3 py-1 text-[11px] font-medium rounded-md transition-colors ${
                 interval === int.value
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  ? 'bg-primary text-on-primary'
+                  : 'text-outline hover:text-on-surface hover:bg-surface-container-high'
               }`}
             >
               {int.label}
@@ -220,30 +203,11 @@ function TradingViewWidgetComponent({
         <div
           ref={resizeRef}
           onMouseDown={handleVerticalResize}
-          className={`h-3 cursor-ns-resize flex items-center justify-center transition-colors ${
-            isResizing ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-gray-700'
+          className={`h-2.5 cursor-ns-resize flex items-center justify-center transition-colors ${
+            isResizing ? 'bg-primary/20' : 'bg-surface-container hover:bg-surface-container-high'
           }`}
         >
-          <div className="w-12 h-1 bg-gray-600 rounded-full" />
-        </div>
-
-        {/* Diagonal Resize Handle - Bottom Right Corner */}
-        <div
-          onMouseDown={handleDiagonalResize}
-          className={`absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-end justify-end ${
-            isResizing ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-300'
-          }`}
-          title="Drag to resize"
-        >
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 10 10"
-            fill="currentColor"
-            className="mr-0.5 mb-0.5"
-          >
-            <path d="M9 9H7v-2h2v2zm0-4H5v-2h2v2h2v2zm0-4H3v-2h2v2h2v2h2v2z" />
-          </svg>
+          <div className="w-10 h-0.5 bg-outline-variant/30 rounded-full" />
         </div>
       </div>
     </div>
