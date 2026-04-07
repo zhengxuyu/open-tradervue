@@ -3,7 +3,7 @@ import { TopAppBar } from '@/components/TopAppBar'
 import { Icon } from '@/components/Icon'
 import { cn } from '@/lib/utils'
 import { getTrades, getPositions, getJournals } from '@/services/api'
-import type { Trade, Position, Journal } from '@/services/api'
+import type { Trade, Position } from '@/services/api'
 
 function arrayToCSV<T extends Record<string, unknown>>(data: T[]): string {
   if (data.length === 0) return ''
