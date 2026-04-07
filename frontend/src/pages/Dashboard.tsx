@@ -56,7 +56,24 @@ export function Dashboard() {
       <TopAppBar
         title="Dashboard"
         actions={
-          <button className="bg-primary text-on-primary text-xs font-label font-bold px-4 py-1.5 rounded-lg uppercase tracking-wider">
+          <button
+            onClick={() => {
+              const data = {
+                summary,
+                recent_trades: recentTrades,
+                daily_pnl: dailyPnl,
+                exported_at: new Date().toISOString(),
+              }
+              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `dashboard-export-${new Date().toISOString().slice(0, 10)}.json`
+              a.click()
+              URL.revokeObjectURL(url)
+            }}
+            className="bg-primary text-on-primary text-xs font-label font-bold px-4 py-1.5 rounded-lg uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all"
+          >
             Export
           </button>
         }
