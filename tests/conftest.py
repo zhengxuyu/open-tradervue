@@ -4,11 +4,12 @@ import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
-# Use in-memory SQLite for tests — must be set before importing backend
+# Use in-memory SQLite for tests
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite://"
 
 from backend.main import app
 from backend.database import Base, get_db
+from backend.auth import get_current_user, CurrentUser
 
 # Create test engine
 test_engine = create_async_engine("sqlite+aiosqlite://", echo=False)
@@ -23,12 +24,21 @@ async def override_get_db():
             await session.close()
 
 
+# Mock user for tests
+mock_user_a = CurrentUser(id="user-a-uuid", email="testa@test.com")
+mock_user_b = CurrentUser(id="user-b-uuid", email="testb@test.com")
+
+
+async def override_get_current_user():
+    return mock_user_a
+
+
 app.dependency_overrides[get_db] = override_get_db
+app.dependency_overrides[get_current_user] = override_get_current_user
 
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
-    """Create tables before each test, drop after."""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -38,7 +48,6 @@ async def setup_db():
 
 @pytest_asyncio.fixture
 async def client():
-    """Async HTTP client for testing."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
@@ -46,19 +55,18 @@ async def client():
 
 @pytest_asyncio.fixture
 async def auth_client(client: AsyncClient):
-    """Client with authenticated user."""
-    # Register user
-    await client.post("/api/auth/register", json={
-        "email": "test@example.com",
-        "username": "testuser",
-        "password": "testpass123",
-    })
-    # Login — the login endpoint uses UserCreate JSON body, not form data
-    resp = await client.post("/api/auth/login", json={
-        "email": "test@example.com",
-        "username": "testuser",
-        "password": "testpass123",
-    })
-    token = resp.json()["access_token"]
-    client.headers["Authorization"] = f"Bearer {token}"
+    """Client authenticated as user A (default mock user)."""
     return client
+
+
+@pytest_asyncio.fixture
+async def user_b_client():
+    """Client authenticated as user B (for isolation tests)."""
+    async def override_user_b():
+        return mock_user_b
+    app.dependency_overrides[get_current_user] = override_user_b
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+    # Restore user A
+    app.dependency_overrides[get_current_user] = override_get_current_user

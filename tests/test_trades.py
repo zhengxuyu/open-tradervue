@@ -85,7 +85,6 @@ async def test_delete_trade(auth_client: AsyncClient):
     resp = await auth_client.delete(f"/api/trades/{trade_id}")
     assert resp.status_code == 204
 
-    # Verify it is gone
     resp = await auth_client.get(f"/api/trades/{trade_id}")
     assert resp.status_code == 404
 
@@ -97,33 +96,28 @@ async def test_get_nonexistent_trade(auth_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_trades_isolated_by_user(client: AsyncClient):
+async def test_trades_isolated_by_user(auth_client: AsyncClient):
     """User A's trades should not be visible to User B."""
-    # Register + login user A
-    await client.post("/api/auth/register", json={
-        "email": "a@test.com", "username": "usera", "password": "pass123",
-    })
-    resp_a = await client.post("/api/auth/login", json={
-        "email": "a@test.com", "username": "usera", "password": "pass123",
-    })
-    token_a = resp_a.json()["access_token"]
+    from backend.main import app
+    from backend.auth import get_current_user, CurrentUser
 
     # User A creates a trade
-    await client.post("/api/trades", json={
+    await auth_client.post("/api/trades", json={
         "symbol": "SPY", "side": "BUY", "quantity": 100,
         "price": 450.0, "executed_at": "2024-01-15T10:30:00", "commission": 1.0,
-    }, headers={"Authorization": f"Bearer {token_a}"})
+    })
 
-    # Register + login user B
-    await client.post("/api/auth/register", json={
-        "email": "b@test.com", "username": "userb", "password": "pass123",
-    })
-    resp_b = await client.post("/api/auth/login", json={
-        "email": "b@test.com", "username": "userb", "password": "pass123",
-    })
-    token_b = resp_b.json()["access_token"]
+    # Switch to user B
+    async def override_user_b():
+        return CurrentUser(id="user-b-uuid", email="b@test.com")
+    app.dependency_overrides[get_current_user] = override_user_b
 
     # User B should see zero trades
-    resp = await client.get("/api/trades", headers={"Authorization": f"Bearer {token_b}"})
+    resp = await auth_client.get("/api/trades")
     assert resp.status_code == 200
     assert len(resp.json()) == 0
+
+    # Restore user A
+    async def override_user_a():
+        return CurrentUser(id="user-a-uuid", email="testa@test.com")
+    app.dependency_overrides[get_current_user] = override_user_a
