@@ -28,6 +28,10 @@ async def get_current_user(
         )
 
     token = credentials.credentials
+    import logging
+    logger = logging.getLogger("tradervue.auth")
+    logger.info(f"Token length: {len(token)}, Secret length: {len(SUPABASE_JWT_SECRET)}, Secret starts: {SUPABASE_JWT_SECRET[:10]}...")
+
     try:
         payload = jwt.decode(
             token,
@@ -37,11 +41,13 @@ async def get_current_user(
         )
         user_id = payload.get("sub")
         email = payload.get("email", "")
+        logger.info(f"Auth success: user={user_id}, email={email}")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
         return CurrentUser(id=user_id, email=email)
-    except JWTError:
+    except JWTError as e:
+        logger.error(f"JWT decode failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail=f"Invalid or expired token: {str(e)}",
         )
