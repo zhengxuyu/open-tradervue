@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime, date
+from datetime import datetime
 from typing import Optional
 from snaptrade_client import SnapTrade
 
@@ -8,8 +8,6 @@ logger = logging.getLogger("tradervue.snaptrade")
 
 SNAPTRADE_CLIENT_ID = os.getenv("SNAPTRADE_CLIENT_ID", "")
 SNAPTRADE_CONSUMER_KEY = os.getenv("SNAPTRADE_CONSUMER_KEY", "")
-
-logger.info(f"SnapTrade config: client_id={'SET' if SNAPTRADE_CLIENT_ID else 'EMPTY'} ({len(SNAPTRADE_CLIENT_ID)} chars), consumer_key={'SET' if SNAPTRADE_CONSUMER_KEY else 'EMPTY'} ({len(SNAPTRADE_CONSUMER_KEY)} chars)")
 
 
 def get_client() -> SnapTrade:
@@ -25,22 +23,12 @@ async def register_user(user_id: str) -> dict:
     """Register a SnapTrade user. Returns user_id and user_secret."""
     client = get_client()
     try:
-        response = client.authentication.register_snap_trade_user(
-            user_id=user_id,
-        )
-        return {"user_id": response.user_id, "user_secret": response.user_secret}
+        response = client.authentication.register_snap_trade_user(user_id=user_id)
+        body = response.body
+        return {"user_id": body["userId"], "user_secret": body["userSecret"]}
     except Exception as e:
-        # User might already exist, try to reset secret
         logger.warning(f"Register failed (may already exist): {e}")
-        try:
-            response = client.authentication.reset_snap_trade_user_secret(
-                user_id=user_id,
-                user_secret=None,
-            )
-            return {"user_id": response.user_id, "user_secret": response.user_secret}
-        except Exception as e2:
-            logger.error(f"Reset secret also failed: {e2}")
-            raise
+        raise
 
 
 async def get_login_url(user_id: str, user_secret: str, redirect_uri: str) -> str:
@@ -51,7 +39,7 @@ async def get_login_url(user_id: str, user_secret: str, redirect_uri: str) -> st
         user_secret=user_secret,
         custom_redirect=redirect_uri,
     )
-    return response.redirect_uri
+    return response.body.get("redirectURI", response.body.get("redirect_uri", ""))
 
 
 async def list_accounts(user_id: str, user_secret: str) -> list:
@@ -61,14 +49,15 @@ async def list_accounts(user_id: str, user_secret: str) -> list:
         user_id=user_id,
         user_secret=user_secret,
     )
+    accounts = response.body if isinstance(response.body, list) else []
     return [
         {
-            "id": str(acc.id),
-            "name": acc.name,
-            "number": acc.number,
-            "institution_name": getattr(acc, 'institution_name', 'Unknown'),
+            "id": str(acc.get("id", "")),
+            "name": acc.get("name", "Unknown"),
+            "number": acc.get("number", ""),
+            "institution_name": acc.get("institution_name", acc.get("institutionName", "Unknown")),
         }
-        for acc in response
+        for acc in accounts
     ]
 
 
@@ -95,18 +84,26 @@ async def get_activities(
         kwargs["accounts"] = account_id
 
     response = client.transactions_and_reporting.get_activities(**kwargs)
+    activities = response.body if isinstance(response.body, list) else []
 
     trades = []
-    for activity in response:
+    for activity in activities:
         try:
+            # Handle symbol field (can be dict or string)
+            symbol_raw = activity.get("symbol", {})
+            if isinstance(symbol_raw, dict):
+                symbol = symbol_raw.get("symbol", symbol_raw.get("rawSymbol", "UNKNOWN"))
+            else:
+                symbol = str(symbol_raw) if symbol_raw else "UNKNOWN"
+
             trade = {
-                "symbol": getattr(activity, 'symbol', {}).get('symbol', 'UNKNOWN') if isinstance(getattr(activity, 'symbol', None), dict) else str(getattr(activity, 'symbol', 'UNKNOWN')),
-                "side": activity.type.upper() if hasattr(activity, 'type') else "BUY",
-                "quantity": float(getattr(activity, 'units', 0) or 0),
-                "price": float(getattr(activity, 'price', 0) or 0),
-                "executed_at": str(getattr(activity, 'trade_date', datetime.now().isoformat())),
-                "commission": float(getattr(activity, 'fee', 0) or 0),
-                "notes": f"Imported from SnapTrade",
+                "symbol": symbol,
+                "side": activity.get("type", "BUY").upper(),
+                "quantity": float(activity.get("units", 0) or 0),
+                "price": float(activity.get("price", 0) or 0),
+                "executed_at": str(activity.get("trade_date", activity.get("tradeDate", datetime.now().isoformat()))),
+                "commission": float(activity.get("fee", 0) or 0),
+                "notes": "Imported from SnapTrade",
             }
             if trade["quantity"] > 0 and trade["price"] > 0:
                 trades.append(trade)
