@@ -127,8 +127,8 @@ export function Journal() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel - History */}
-        <div className="w-[30%] border-r border-[#292524] bg-surface-container-low flex flex-col">
-          <div className="p-4 flex items-center justify-between border-b border-[#292524]">
+        <div className="w-[30%] border-r border-[#111413] bg-surface-container-low flex flex-col">
+          <div className="p-4 flex items-center justify-between border-b border-[#111413]">
             <span className="font-label text-xs font-bold text-outline uppercase tracking-wider">History</span>
             <div className="flex items-center gap-2">
               <button
