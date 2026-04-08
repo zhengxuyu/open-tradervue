@@ -15,25 +15,37 @@ import { Settings } from '@/pages/Settings'
 import { Login } from '@/pages/Login'
 import { Register } from '@/pages/Register'
 import { Landing } from '@/pages/Landing'
+import { Paywall } from '@/pages/Paywall'
 import { supabase } from '@/services/supabase'
+import { getSubscriptionStatus } from '@/services/stripe'
 import type { Session } from '@supabase/supabase-js'
 
-function PrivateRoute({ session, children }: { session: Session | null; children: React.ReactNode }) {
+function PrivateRoute({ session, subscribed, children }: { session: Session | null; subscribed: boolean | null; children: React.ReactNode }) {
   if (!session) {
+    return <Navigate to="/" replace />
+  }
+  if (!subscribed) {
     return <Navigate to="/" replace />
   }
   return <Layout>{children}</Layout>
 }
 
-function HomePage({ session }: { session: Session | null }) {
-  if (session) {
-    return <Layout><Dashboard /></Layout>
+function HomePage({ session, subscribed }: { session: Session | null; subscribed: boolean | null }) {
+  if (!session) return <Landing />
+  if (subscribed === null) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="text-outline text-sm">Loading...</div>
+      </div>
+    )
   }
-  return <Landing />
+  if (!subscribed) return <Paywall />
+  return <Layout><Dashboard /></Layout>
 }
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
+  const [subscribed, setSubscribed] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -41,6 +53,15 @@ function App() {
     // INITIAL_SESSION fires after URL hash tokens are parsed (OAuth callback).
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
+      if (session) {
+        getSubscriptionStatus().then(({ subscribed }) => {
+          setSubscribed(subscribed)
+        }).catch(() => {
+          setSubscribed(false)
+        })
+      } else {
+        setSubscribed(null)
+      }
       if (event === 'INITIAL_SESSION') {
         setLoading(false)
       }
@@ -69,17 +90,17 @@ function App() {
         <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/register" element={session ? <Navigate to="/" replace /> : <Register />} />
         <Route path="/landing" element={<Landing />} />
-        <Route path="/" element={<HomePage session={session} />} />
-        <Route path="/trades" element={<PrivateRoute session={session}><Trades /></PrivateRoute>} />
-        <Route path="/positions/daily" element={<PrivateRoute session={session}><DailyPositionDetail /></PrivateRoute>} />
-        <Route path="/positions/:id" element={<PrivateRoute session={session}><PositionDetailPage /></PrivateRoute>} />
-        <Route path="/import" element={<PrivateRoute session={session}><Import /></PrivateRoute>} />
-        <Route path="/calendar" element={<PrivateRoute session={session}><Calendar /></PrivateRoute>} />
-        <Route path="/analysis" element={<PrivateRoute session={session}><Analysis /></PrivateRoute>} />
-        <Route path="/statistics" element={<PrivateRoute session={session}><Statistics /></PrivateRoute>} />
-        <Route path="/charts" element={<PrivateRoute session={session}><Charts /></PrivateRoute>} />
-        <Route path="/journal" element={<PrivateRoute session={session}><Journal /></PrivateRoute>} />
-        <Route path="/settings" element={<PrivateRoute session={session}><Settings /></PrivateRoute>} />
+        <Route path="/" element={<HomePage session={session} subscribed={subscribed} />} />
+        <Route path="/trades" element={<PrivateRoute session={session} subscribed={subscribed}><Trades /></PrivateRoute>} />
+        <Route path="/positions/daily" element={<PrivateRoute session={session} subscribed={subscribed}><DailyPositionDetail /></PrivateRoute>} />
+        <Route path="/positions/:id" element={<PrivateRoute session={session} subscribed={subscribed}><PositionDetailPage /></PrivateRoute>} />
+        <Route path="/import" element={<PrivateRoute session={session} subscribed={subscribed}><Import /></PrivateRoute>} />
+        <Route path="/calendar" element={<PrivateRoute session={session} subscribed={subscribed}><Calendar /></PrivateRoute>} />
+        <Route path="/analysis" element={<PrivateRoute session={session} subscribed={subscribed}><Analysis /></PrivateRoute>} />
+        <Route path="/statistics" element={<PrivateRoute session={session} subscribed={subscribed}><Statistics /></PrivateRoute>} />
+        <Route path="/charts" element={<PrivateRoute session={session} subscribed={subscribed}><Charts /></PrivateRoute>} />
+        <Route path="/journal" element={<PrivateRoute session={session} subscribed={subscribed}><Journal /></PrivateRoute>} />
+        <Route path="/settings" element={<PrivateRoute session={session} subscribed={subscribed}><Settings /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
   )

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeJournal.dev — Color Palette Options Round 3</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #0a0a0a; color: #fff; padding: 40px 20px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 2.5rem; font-weight: 800; text-align: center; margin-bottom: 8px; }
+  .subtitle { text-align: center; color: #888; margin-bottom: 60px; font-size: 1.1rem; }
+  .palette-section { margin-bottom: 80px; }
+  .palette-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .palette-number { font-family: 'Space Grotesk', monospace; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: #666; }
+  .palette-name { font-size: 1.5rem; font-weight: 700; }
+  .palette-desc { color: #888; margin-bottom: 24px; max-width: 700px; line-height: 1.6; }
+  .palette-tag { display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 0.75rem; font-weight: 600; margin-left: 12px; }
+  .colors-row { display: flex; gap: 4px; margin-bottom: 24px; border-radius: 16px; overflow: hidden; height: 80px; }
+  .color-swatch { flex: 1; display: flex; align-items: flex-end; padding: 8px 12px; position: relative; }
+  .color-swatch span { font-family: 'Space Grotesk', monospace; font-size: 0.7rem; font-weight: 500; opacity: 0.8; }
+  .color-swatch .label { position: absolute; top: 8px; left: 12px; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.6; }
+  .preview { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .preview-card { border-radius: 20px; padding: 32px; min-height: 280px; position: relative; overflow: hidden; }
+  .preview-card h3 { font-size: 1.5rem; font-weight: 800; margin-bottom: 8px; }
+  .preview-card p { font-size: 0.9rem; opacity: 0.7; line-height: 1.5; margin-bottom: 16px; }
+  .preview-btn { display: inline-block; padding: 10px 24px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; }
+  .preview-btn-outline { background: transparent; border: 1.5px solid; padding: 9px 24px; }
+  .mini-card { border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .mini-card .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.5; }
+  .mini-card .value { font-family: 'Space Grotesk', monospace; font-size: 1.2rem; font-weight: 700; }
+  .glass-overlay { position: absolute; inset: 0; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; }
+  @media (max-width: 768px) { .preview { grid-template-columns: 1fr; } h1 { font-size: 1.8rem; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Palette Options — Round 3</h1>
+<p class="subtitle">Ocean Depth stays. 3 radically different directions.</p>
+
+<!-- Palette 1: Ocean Depth (kept) -->
+<div class="palette-section">
+  <div class="palette-header">
+    <span class="palette-number">Option 01</span>
+    <span class="palette-name">Ocean Depth</span>
+    <span class="palette-tag" style="background: #0ea5e9; color: #fff;">Baseline</span>
+  </div>
+  <p class="palette-desc">Deep navy + cyan. Bloomberg Terminal DNA. Trust, precision, institutional feel.</p>
+  <div class="colors-row">
+    <div class="color-swatch" style="background: #0b1120; color: #fff;"><span class="label">BG</span><span>#0b1120</span></div>
+    <div class="color-swatch" style="background: #131d32; color: #fff;"><span class="label">Surface</span><span>#131d32</span></div>
+    <div class="color-swatch" style="background: #1e2d4a; color: #fff;"><span class="label">Card</span><span>#1e2d4a</span></div>
+    <div class="color-swatch" style="background: #0ea5e9; color: #fff;"><span class="label">Primary</span><span>#0ea5e9</span></div>
+    <div class="color-swatch" style="background: #10b981; color: #fff;"><span class="label">Profit</span><span>#10b981</span></div>
+    <div class="color-swatch" style="background: #ef4444; color: #fff;"><span class="label">Loss</span><span>#ef4444</span></div>
+    <div class="color-swatch" style="background: #e2e8f0; color: #0b1120;"><span class="label">Text</span><span>#e2e8f0</span></div>
+  </div>
+  <div class="preview">
+    <div class="preview-card" style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe, #f5f3ff); display:flex;flex-direction:column;justify-content:center;">
+      <h3 style="color: #0b1120;">Track Every Trade.</h3>
+      <p style="color: #475569;">Professional analytics for serious traders.</p>
+      <div style="display:flex;gap:8px;">
+        <button class="preview-btn" style="background:#0ea5e9;color:#fff;">Get Started Free</button>
+        <button class="preview-btn preview-btn-outline" style="color:#0ea5e9;border-color:#0ea5e9;">GitHub</button>
+      </div>
+    </div>
+    <div class="preview-card" style="background: #0b1120;">
+      <div class="glass-overlay"></div>
+      <div class="mini-card" style="background:#131d32;"><div><span class="label" style="color:#94a3b8;">Total P&L</span><br><span class="value" style="color:#10b981;">+$42,190</span></div></div>
+      <div class="mini-card" style="background:#131d32;"><div><span class="label" style="color:#94a3b8;">Win Rate</span><br><span class="value" style="color:#e2e8f0;">68.2%</span></div></div>
+      <div class="mini-card" style="background:#131d32;"><div><span class="label" style="color:#94a3b8;">Profit Factor</span><br><span class="value" style="color:#0ea5e9;">2.41</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Palette 2: Paper Light -->
+<div class="palette-section">
+  <div class="palette-header">
+    <span class="palette-number">Option 02</span>
+    <span class="palette-name">Paper Light</span>
+    <span class="palette-tag" style="background: #f5f5f0; color: #333;">Light Mode</span>
+  </div>
+  <p class="palette-desc">完全反转：浅色 app。暖白纸张质感 + 墨色文字 + 靛蓝点缀。像一本高级笔记本。所有竞品都在做深色，你做浅色就是最大的差异化。适合长时间使用不伤眼的交易者。</p>
+  <div class="colors-row">
+    <div class="color-swatch" style="background: #fafaf7; color: #333;"><span class="label">BG</span><span>#fafaf7</span></div>
+    <div class="color-swatch" style="background: #f0efe8; color: #333;"><span class="label">Surface</span><span>#f0efe8</span></div>
+    <div class="color-swatch" style="background: #ffffff; color: #333;"><span class="label">Card</span><span>#ffffff</span></div>
+    <div class="color-swatch" style="background: #4338ca; color: #fff;"><span class="label">Primary</span><span>#4338ca</span></div>
+    <div class="color-swatch" style="background: #16a34a; color: #fff;"><span class="label">Profit</span><span>#16a34a</span></div>
+    <div class="color-swatch" style="background: #dc2626; color: #fff;"><span class="label">Loss</span><span>#dc2626</span></div>
+    <div class="color-swatch" style="background: #1c1917; color: #f0efe8;"><span class="label">Text</span><span>#1c1917</span></div>
+  </div>
+  <div class="preview">
+    <div class="preview-card" style="background: #fafaf7; display:flex;flex-direction:column;justify-content:center; border: 1px solid #e7e5df;">
+      <h3 style="color: #1c1917;">Track Every Trade.</h3>
+      <p style="color: #78716c;">Professional analytics for serious traders.</p>
+      <div style="display:flex;gap:8px;">
+        <button class="preview-btn" style="background:#4338ca;color:#fff;">Get Started Free</button>
+        <button class="preview-btn preview-btn-outline" style="color:#4338ca;border-color:#4338ca;">GitHub</button>
+      </div>
+    </div>
+    <div class="preview-card" style="background: #fafaf7; border: 1px solid #e7e5df;">
+      <div class="mini-card" style="background:#fff; border: 1px solid #e7e5df;"><div><span class="label" style="color:#a8a29e;">Total P&L</span><br><span class="value" style="color:#16a34a;">+$42,190</span></div></div>
+      <div class="mini-card" style="background:#fff; border: 1px solid #e7e5df;"><div><span class="label" style="color:#a8a29e;">Win Rate</span><br><span class="value" style="color:#1c1917;">68.2%</span></div></div>
+      <div class="mini-card" style="background:#fff; border: 1px solid #e7e5df;"><div><span class="label" style="color:#a8a29e;">Profit Factor</span><br><span class="value" style="color:#4338ca;">2.41</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Palette 3: Terminal Green -->
+<div class="palette-section">
+  <div class="palette-header">
+    <span class="palette-number">Option 03</span>
+    <span class="palette-name">Terminal Green</span>
+    <span class="palette-tag" style="background: #22c55e; color: #000;">Retro Hacker</span>
+  </div>
+  <p class="palette-desc">纯黑 + 磷光绿。80 年代 CRT 终端美学。极客感拉满。对开源社区吸引力极强（"这看起来像我用的工具"）。风险：可能不够"专业"，但在 Hacker News 上会炸。</p>
+  <div class="colors-row">
+    <div class="color-swatch" style="background: #000000; color: #22c55e;"><span class="label" style="color:#22c55e;">BG</span><span>#000000</span></div>
+    <div class="color-swatch" style="background: #0a0a0a; color: #22c55e;"><span class="label" style="color:#22c55e;">Surface</span><span>#0a0a0a</span></div>
+    <div class="color-swatch" style="background: #141414; color: #22c55e;"><span class="label" style="color:#22c55e;">Card</span><span>#141414</span></div>
+    <div class="color-swatch" style="background: #22c55e; color: #000;"><span class="label">Primary</span><span>#22c55e</span></div>
+    <div class="color-swatch" style="background: #4ade80; color: #000;"><span class="label">Profit</span><span>#4ade80</span></div>
+    <div class="color-swatch" style="background: #f87171; color: #000;"><span class="label">Loss</span><span>#f87171</span></div>
+    <div class="color-swatch" style="background: #86efac; color: #000;"><span class="label">Text</span><span>#86efac</span></div>
+  </div>
+  <div class="preview">
+    <div class="preview-card" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7, #ecfdf5); display:flex;flex-direction:column;justify-content:center;">
+      <h3 style="color: #000;">Track Every Trade.</h3>
+      <p style="color: #4b5563;">Professional analytics for serious traders.</p>
+      <div style="display:flex;gap:8px;">
+        <button class="preview-btn" style="background:#22c55e;color:#000;font-weight:700;">Get Started Free</button>
+        <button class="preview-btn preview-btn-outline" style="color:#16a34a;border-color:#22c55e;">GitHub</button>
+      </div>
+    </div>
+    <div class="preview-card" style="background: #000;">
+      <div class="glass-overlay" style="border-color: rgba(34,197,94,0.15);"></div>
+      <div class="mini-card" style="background:#0a0a0a; border: 1px solid rgba(34,197,94,0.1);"><div><span class="label" style="color:#4ade80;">Total P&L</span><br><span class="value" style="color:#4ade80;">+$42,190</span></div></div>
+      <div class="mini-card" style="background:#0a0a0a; border: 1px solid rgba(34,197,94,0.1);"><div><span class="label" style="color:#4ade80;">Win Rate</span><br><span class="value" style="color:#86efac;">68.2%</span></div></div>
+      <div class="mini-card" style="background:#0a0a0a; border: 1px solid rgba(34,197,94,0.1);"><div><span class="label" style="color:#4ade80;">Profit Factor</span><br><span class="value" style="color:#22c55e;">2.41</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Palette 4: Sunset Gradient -->
+<div class="palette-section">
+  <div class="palette-header">
+    <span class="palette-number">Option 04</span>
+    <span class="palette-name">Sunset Gradient</span>
+    <span class="palette-tag" style="background: linear-gradient(90deg, #f97316, #ec4899); color: #fff;">Bold</span>
+  </div>
+  <p class="palette-desc">深灰底 + 橙到粉的渐变主色。大胆、有活力、记忆点极强。Landing page 用渐变大色块做视觉冲击，app 内部保持克制。适合 Product Hunt launch 和社交媒体传播。</p>
+  <div class="colors-row">
+    <div class="color-swatch" style="background: #0c0a09; color: #fff;"><span class="label">BG</span><span>#0c0a09</span></div>
+    <div class="color-swatch" style="background: #1c1917; color: #fff;"><span class="label">Surface</span><span>#1c1917</span></div>
+    <div class="color-swatch" style="background: #292524; color: #fff;"><span class="label">Card</span><span>#292524</span></div>
+    <div class="color-swatch" style="background: linear-gradient(90deg, #f97316, #ec4899); color: #fff;"><span class="label">Primary</span><span>gradient</span></div>
+    <div class="color-swatch" style="background: #f97316; color: #fff;"><span class="label">Accent 1</span><span>#f97316</span></div>
+    <div class="color-swatch" style="background: #ec4899; color: #fff;"><span class="label">Accent 2</span><span>#ec4899</span></div>
+    <div class="color-swatch" style="background: #34d399; color: #0c0a09;"><span class="label">Profit</span><span>#34d399</span></div>
+    <div class="color-swatch" style="background: #fb7185; color: #fff;"><span class="label">Loss</span><span>#fb7185</span></div>
+    <div class="color-swatch" style="background: #fafaf9; color: #0c0a09;"><span class="label">Text</span><span>#fafaf9</span></div>
+  </div>
+  <div class="preview">
+    <div class="preview-card" style="background: linear-gradient(135deg, #fff7ed, #fdf2f8, #faf5ff); display:flex;flex-direction:column;justify-content:center;">
+      <h3 style="color: #0c0a09;">Track Every Trade.</h3>
+      <p style="color: #78716c;">Professional analytics for serious traders.</p>
+      <div style="display:flex;gap:8px;">
+        <button class="preview-btn" style="background:linear-gradient(90deg,#f97316,#ec4899);color:#fff;">Get Started Free</button>
+        <button class="preview-btn preview-btn-outline" style="color:#f97316;border-color:#f97316;">GitHub</button>
+      </div>
+    </div>
+    <div class="preview-card" style="background: #0c0a09;">
+      <div class="glass-overlay"></div>
+      <div class="mini-card" style="background:#1c1917;"><div><span class="label" style="color:#78716c;">Total P&L</span><br><span class="value" style="color:#34d399;">+$42,190</span></div></div>
+      <div class="mini-card" style="background:#1c1917;"><div><span class="label" style="color:#78716c;">Win Rate</span><br><span class="value" style="color:#fafaf9;">68.2%</span></div></div>
+      <div class="mini-card" style="background:#1c1917;"><div><span class="label" style="color:#78716c;">Profit Factor</span><br><span class="value" style="color:#f97316;">2.41</span></div></div>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

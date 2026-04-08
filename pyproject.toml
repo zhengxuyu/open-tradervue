@@ -23,6 +23,7 @@ dependencies = [
     "asyncpg>=0.29.0",
     "alembic>=1.13.0",
     "gunicorn>=21.0.0",
+    "stripe>=8.0.0",
 ]
 
 [project.scripts]

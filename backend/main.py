@@ -19,6 +19,7 @@ logger = logging.getLogger("tradervue")
 from .database import init_db
 from .routes import trades_router, analysis_router, calendar_router, market_data_router, journal_router
 from .routes.auth import router as auth_router
+from .routes.stripe import router as stripe_router
 
 
 @asynccontextmanager
@@ -66,6 +67,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 app.include_router(auth_router)
+app.include_router(stripe_router)
 app.include_router(trades_router)
 app.include_router(analysis_router)
 app.include_router(calendar_router)
