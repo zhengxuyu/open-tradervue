@@ -24,6 +24,7 @@ dependencies = [
     "alembic>=1.13.0",
     "gunicorn>=21.0.0",
     "stripe>=8.0.0",
+    "snaptrade-python-sdk>=11.0.0",
 ]
 
 [project.scripts]
