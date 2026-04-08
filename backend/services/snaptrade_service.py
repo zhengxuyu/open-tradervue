@@ -27,7 +27,18 @@ async def register_user(user_id: str) -> dict:
         body = response.body
         return {"user_id": body["userId"], "user_secret": body["userSecret"]}
     except Exception as e:
-        logger.warning(f"Register failed (may already exist): {e}")
+        if "already exist" in str(e):
+            # User exists on SnapTrade, delete and re-register to get a new secret
+            logger.info(f"User {user_id} already exists on SnapTrade, deleting and re-registering")
+            try:
+                client.authentication.delete_snap_trade_user(user_id=user_id)
+                response = client.authentication.register_snap_trade_user(user_id=user_id)
+                body = response.body
+                return {"user_id": body["userId"], "user_secret": body["userSecret"]}
+            except Exception as e2:
+                logger.error(f"Delete + re-register failed: {e2}")
+                raise
+        logger.warning(f"Register failed: {e}")
         raise
 
 
