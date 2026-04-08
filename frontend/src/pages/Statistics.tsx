@@ -104,7 +104,7 @@ export function Statistics() {
                 <Tooltip contentStyle={tooltipStyle} formatter={(value) => [formatCurrency(Number(value)), 'Avg P&L']} labelFormatter={(v) => `${v}:00`} />
                 <Bar dataKey="avg_pnl" radius={[4, 4, 0, 0]}>
                   {hourData.map((entry, i) => (
-                    <Cell key={i} fill={entry.avg_pnl >= 0 ? '#34d399' : '#e11d48'} />
+                    <Cell key={i} fill={entry.avg_pnl >= 0 ? '#34d399' : '#ef4444'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -160,7 +160,7 @@ export function Statistics() {
                 <Tooltip contentStyle={tooltipStyle} formatter={(value) => [formatCurrency(Number(value)), 'Avg P&L']} />
                 <Bar dataKey="avg_pnl" radius={[4, 4, 0, 0]}>
                   {dayData.map((entry, i) => (
-                    <Cell key={i} fill={entry.avg_pnl >= 0 ? '#34d399' : '#e11d48'} />
+                    <Cell key={i} fill={entry.avg_pnl >= 0 ? '#34d399' : '#ef4444'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -216,7 +216,7 @@ export function Statistics() {
                 <Tooltip contentStyle={tooltipStyle} formatter={(value) => [formatCurrency(Number(value)), 'P&L']} />
                 <Bar dataKey="total_pnl" radius={[0, 4, 4, 0]}>
                   {sortedByPnl.slice(0, 20).map((entry, i) => (
-                    <Cell key={i} fill={entry.total_pnl >= 0 ? '#34d399' : '#e11d48'} />
+                    <Cell key={i} fill={entry.total_pnl >= 0 ? '#34d399' : '#ef4444'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -282,7 +282,7 @@ export function Statistics() {
                 <Tooltip contentStyle={tooltipStyle} formatter={(value) => [formatCurrency(Number(value)), 'Avg P&L']} />
                 <Bar dataKey="avg_pnl" radius={[0, 4, 4, 0]}>
                   {holdData.map((entry, i) => (
-                    <Cell key={i} fill={entry.avg_pnl >= 0 ? '#34d399' : '#e11d48'} />
+                    <Cell key={i} fill={entry.avg_pnl >= 0 ? '#34d399' : '#ef4444'} />
                   ))}
                 </Bar>
               </BarChart>
@@ -346,7 +346,7 @@ export function Statistics() {
                   <Tooltip contentStyle={tooltipStyle} formatter={(value) => [`${Number(value)} trades`, 'Count']} />
                   <Bar dataKey="trade_count" radius={[4, 4, 0, 0]}>
                     {distData.map((entry, i) => (
-                      <Cell key={i} fill={entry.range_label.startsWith('-') || entry.range_label.startsWith('< -') ? '#e11d48' : '#34d399'} />
+                      <Cell key={i} fill={entry.range_label.startsWith('-') || entry.range_label.startsWith('< -') ? '#ef4444' : '#34d399'} />
                     ))}
                   </Bar>
                 </BarChart>

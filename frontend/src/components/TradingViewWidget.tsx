@@ -72,7 +72,7 @@ function TradingViewWidgetComponent({
         theme: 'dark',
         style: '1', // Candlestick
         locale: 'zh_CN',
-        toolbar_bg: '#0c0a09',
+        toolbar_bg: '#080a09',
         enable_publishing: false,
         allow_symbol_change: true,
         save_image: true,
@@ -96,22 +96,22 @@ function TradingViewWidgetComponent({
           'save_chart_properties_to_local_storage',
         ],
         overrides: {
-          'paneProperties.background': '#0c0a09',
+          'paneProperties.background': '#080a09',
           'paneProperties.backgroundType': 'solid',
           'paneProperties.vertGridProperties.color': 'rgba(65, 71, 83, 0.15)',
           'paneProperties.horzGridProperties.color': 'rgba(65, 71, 83, 0.15)',
           'mainSeriesProperties.candleStyle.upColor': '#059669',
-          'mainSeriesProperties.candleStyle.downColor': '#e11d48',
+          'mainSeriesProperties.candleStyle.downColor': '#ef4444',
           'mainSeriesProperties.candleStyle.borderUpColor': '#059669',
-          'mainSeriesProperties.candleStyle.borderDownColor': '#e11d48',
+          'mainSeriesProperties.candleStyle.borderDownColor': '#ef4444',
           'mainSeriesProperties.candleStyle.wickUpColor': '#059669',
-          'mainSeriesProperties.candleStyle.wickDownColor': '#e11d48',
-          'scalesProperties.textColor': '#78716c',
+          'mainSeriesProperties.candleStyle.wickDownColor': '#ef4444',
+          'scalesProperties.textColor': '#525252',
           'scalesProperties.lineColor': 'rgba(65, 71, 83, 0.15)',
         },
         loading_screen: {
-          backgroundColor: '#0c0a09',
-          foregroundColor: '#fb923c',
+          backgroundColor: '#080a09',
+          foregroundColor: '#10b981',
         },
       })
     }
