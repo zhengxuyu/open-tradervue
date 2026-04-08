@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { TopAppBar } from '@/components/TopAppBar'
 import { Icon } from '@/components/Icon'
 import { cn } from '@/lib/utils'
 import { getTrades, getPositions, getJournals } from '@/services/api'
 import type { Trade, Position } from '@/services/api'
+import { getBrokerStatus, connectBroker, listBrokerAccounts, importBrokerTrades } from '@/services/broker'
 
 function arrayToCSV<T extends Record<string, unknown>>(data: T[]): string {
   if (data.length === 0) return ''
@@ -90,6 +92,68 @@ export function Settings() {
   const [exportingPositions, setExportingPositions] = useState(false)
   const [exportingBackup, setExportingBackup] = useState(false)
   const [accountSaved, setAccountSaved] = useState(false)
+
+  // Broker connection state
+  const [searchParams] = useSearchParams()
+  const [brokerStatus, setBrokerStatus] = useState<{ connected: boolean; status: string }>({ connected: false, status: 'none' })
+  const [brokerAccounts, setBrokerAccounts] = useState<any[]>([])
+  const [brokerConnecting, setBrokerConnecting] = useState(false)
+  const [brokerImporting, setBrokerImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number; total: number } | null>(null)
+  const [importStartDate, setImportStartDate] = useState('')
+  const [importEndDate, setImportEndDate] = useState('')
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('')
+
+  const refreshBrokerStatus = useCallback(async () => {
+    try {
+      const status = await getBrokerStatus()
+      setBrokerStatus(status)
+      if (status.connected) {
+        const { accounts } = await listBrokerAccounts()
+        setBrokerAccounts(accounts)
+      }
+    } catch {
+      // silently ignore - user may not be authenticated yet
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshBrokerStatus()
+  }, [refreshBrokerStatus])
+
+  // Handle redirect back from SnapTrade portal
+  useEffect(() => {
+    if (searchParams.get('broker') === 'connected') {
+      refreshBrokerStatus()
+    }
+  }, [searchParams, refreshBrokerStatus])
+
+  async function handleConnectBroker() {
+    setBrokerConnecting(true)
+    try {
+      const url = await connectBroker()
+      window.location.href = url
+    } catch {
+      setBrokerConnecting(false)
+    }
+  }
+
+  async function handleImportTrades() {
+    setBrokerImporting(true)
+    setImportResult(null)
+    try {
+      const result = await importBrokerTrades({
+        account_id: selectedAccountId || undefined,
+        start_date: importStartDate || undefined,
+        end_date: importEndDate || undefined,
+      })
+      setImportResult(result)
+    } catch {
+      setImportResult({ imported: 0, skipped: 0, total: 0 })
+    } finally {
+      setBrokerImporting(false)
+    }
+  }
 
   useEffect(() => {
     const key = apiConfig.alphaVantageKey.trim()
@@ -237,7 +301,137 @@ export function Settings() {
           </div>
         </section>
 
-        {/* Section 2: Data Export & Backup */}
+        {/* Section 2: Broker Connection */}
+        <section className="bg-surface-container rounded-xl overflow-hidden">
+          <div className="p-6 border-b border-outline-variant/10 bg-surface-container-high flex items-center gap-3">
+            <Icon name="link" className="text-primary" />
+            <h3 className="text-sm font-bold text-on-surface">Broker Connection</h3>
+          </div>
+          <div className="p-6 space-y-6">
+            {/* Status indicator */}
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  'w-2 h-2 rounded-full',
+                  brokerStatus.connected ? 'bg-green-500' : 'bg-gray-400'
+                )}
+              />
+              <span className="text-xs text-on-surface-variant">
+                {brokerStatus.connected ? 'Connected' : 'Not connected'}
+              </span>
+            </div>
+
+            {!brokerStatus.connected ? (
+              <div>
+                <p className="text-xs text-outline mb-4">
+                  Connect your brokerage account to automatically import trades via SnapTrade.
+                </p>
+                <button
+                  onClick={handleConnectBroker}
+                  disabled={brokerConnecting}
+                  className="bg-gradient-to-br from-primary to-primary-container text-on-primary-container px-6 py-2.5 rounded-lg text-sm font-bold cursor-pointer disabled:opacity-50"
+                >
+                  {brokerConnecting ? 'Connecting...' : 'Connect Broker'}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Connected accounts */}
+                {brokerAccounts.length > 0 && (
+                  <div>
+                    <label className={LABEL}>Connected Accounts</label>
+                    <div className="mt-2 space-y-2">
+                      {brokerAccounts.map((acc) => (
+                        <div
+                          key={acc.id}
+                          className="bg-surface-container-low p-3 rounded-lg border border-outline-variant/10 flex items-center justify-between"
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-on-surface">{acc.name || acc.number}</p>
+                            <p className="text-xs text-outline">{acc.institution_name}</p>
+                          </div>
+                          <span className="text-xs text-outline font-mono">{acc.number}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Import controls */}
+                <div>
+                  <label className={LABEL}>Import Trades</label>
+                  <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {brokerAccounts.length > 1 && (
+                      <div>
+                        <label className={LABEL}>Account</label>
+                        <select
+                          className={cn(INPUT, 'font-label')}
+                          value={selectedAccountId}
+                          onChange={(e) => setSelectedAccountId(e.target.value)}
+                        >
+                          <option value="">All accounts</option>
+                          {brokerAccounts.map((acc) => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.name || acc.number}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <div>
+                      <label className={LABEL}>Start Date</label>
+                      <input
+                        type="date"
+                        className={cn(INPUT, 'font-label')}
+                        value={importStartDate}
+                        onChange={(e) => setImportStartDate(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL}>End Date</label>
+                      <input
+                        type="date"
+                        className={cn(INPUT, 'font-label')}
+                        value={importEndDate}
+                        onChange={(e) => setImportEndDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={handleImportTrades}
+                    disabled={brokerImporting}
+                    className="bg-gradient-to-br from-primary to-primary-container text-on-primary-container px-6 py-2.5 rounded-lg text-sm font-bold cursor-pointer disabled:opacity-50"
+                  >
+                    {brokerImporting ? 'Importing...' : 'Import Trades'}
+                  </button>
+                  <button
+                    onClick={handleConnectBroker}
+                    disabled={brokerConnecting}
+                    className="px-4 py-2 bg-surface-container-high text-on-surface text-xs font-label font-bold uppercase tracking-widest rounded-lg hover:bg-surface-bright transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {brokerConnecting ? 'Connecting...' : 'Add Another Broker'}
+                  </button>
+                </div>
+
+                {/* Import result */}
+                {importResult && (
+                  <div className="bg-surface-container-low p-4 rounded-lg border border-outline-variant/10">
+                    <p className="text-sm text-on-surface">
+                      <span className="font-bold text-primary">{importResult.imported}</span> trades imported,{' '}
+                      <span className="font-bold">{importResult.skipped}</span> skipped (duplicates),{' '}
+                      <span className="text-outline">{importResult.total} total found</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Section 3: Data Export & Backup */}
         <section className="bg-surface-container rounded-xl overflow-hidden">
           <div className="p-6 border-b border-outline-variant/10 bg-surface-container-high flex items-center gap-3">
             <Icon name="cloud_download" className="text-primary" />
@@ -287,7 +481,7 @@ export function Settings() {
           </div>
         </section>
 
-        {/* Section 3: API Configuration */}
+        {/* Section 4: API Configuration */}
         <section className="bg-surface-container rounded-xl overflow-hidden">
           <div className="p-6 border-b border-outline-variant/10 bg-surface-container-high flex items-center gap-3">
             <Icon name="key" className="text-primary" />
