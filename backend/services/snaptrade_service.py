@@ -9,8 +9,12 @@ logger = logging.getLogger("tradervue.snaptrade")
 SNAPTRADE_CLIENT_ID = os.getenv("SNAPTRADE_CLIENT_ID", "")
 SNAPTRADE_CONSUMER_KEY = os.getenv("SNAPTRADE_CONSUMER_KEY", "")
 
+logger.info(f"SnapTrade config: client_id={'SET' if SNAPTRADE_CLIENT_ID else 'EMPTY'} ({len(SNAPTRADE_CLIENT_ID)} chars), consumer_key={'SET' if SNAPTRADE_CONSUMER_KEY else 'EMPTY'} ({len(SNAPTRADE_CONSUMER_KEY)} chars)")
+
 
 def get_client() -> SnapTrade:
+    if not SNAPTRADE_CLIENT_ID or not SNAPTRADE_CONSUMER_KEY:
+        raise ValueError("SNAPTRADE_CLIENT_ID and SNAPTRADE_CONSUMER_KEY must be set")
     return SnapTrade(
         consumer_key=SNAPTRADE_CONSUMER_KEY,
         client_id=SNAPTRADE_CLIENT_ID,
