@@ -7,9 +7,11 @@ import {
   getAnalysisSummary,
   getTrades,
   getAdvancedStatistics,
+  getPositions,
   type AnalysisSummary,
   type Trade,
   type DailyPnlData,
+  type Position,
 } from '@/services/api'
 import { formatCurrency } from '@/lib/utils'
 import {
@@ -20,19 +22,22 @@ export function Dashboard() {
   const [summary, setSummary] = useState<AnalysisSummary | null>(null)
   const [recentTrades, setRecentTrades] = useState<Trade[]>([])
   const [dailyPnl, setDailyPnl] = useState<DailyPnlData[]>([])
+  const [openPositions, setOpenPositions] = useState<Position[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [summaryData, tradesData, statsData] = await Promise.all([
+        const [summaryData, tradesData, statsData, positionsData] = await Promise.all([
           getAnalysisSummary(),
           getTrades({ limit: 10 }),
           getAdvancedStatistics(),
+          getPositions({ status: 'open' }),
         ])
         setSummary(summaryData)
         setRecentTrades(tradesData)
         setDailyPnl(statsData.daily_pnl.slice(-30))
+        setOpenPositions(positionsData)
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error)
       } finally {
@@ -191,6 +196,27 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Open Positions */}
+        {openPositions.length > 0 && (
+          <div className="bg-surface-container rounded-xl overflow-hidden">
+            <div className="p-6 border-b border-outline-variant/10">
+              <h3 className="text-sm font-headline font-bold text-on-surface uppercase tracking-wider">
+                Open Positions
+              </h3>
+            </div>
+            <div className="p-4 space-y-3">
+              {openPositions.map(pos => (
+                <div key={pos.id} className="flex justify-between items-center p-4 bg-surface-container-high rounded-xl">
+                  <div>
+                    <span className="font-data font-bold text-primary">{pos.symbol}</span>
+                    <p className="text-xs text-outline mt-1">{pos.quantity} shares @ ${pos.entry_price.toFixed(2)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Recent Trades */}
         <div className="bg-surface-container rounded-xl overflow-hidden">
