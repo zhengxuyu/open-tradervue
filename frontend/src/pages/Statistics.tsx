@@ -9,7 +9,7 @@ import {
 import { formatCurrency, cn, getPnLColor } from '@/lib/utils'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, AreaChart, Area, ComposedChart, Line
+  ResponsiveContainer, Cell, AreaChart, Area
 } from 'recharts'
 
 type TabType = 'hour' | 'day' | 'symbol' | 'holding' | 'pnl' | 'market' | 'risk' | 'insights' | 'charts'
