@@ -12,7 +12,7 @@ import {
   ResponsiveContainer, Cell
 } from 'recharts'
 
-type TabType = 'hour' | 'day' | 'symbol' | 'holding' | 'pnl' | 'market' | 'risk'
+type TabType = 'hour' | 'day' | 'symbol' | 'holding' | 'pnl' | 'market' | 'risk' | 'insights'
 
 const TABS: { key: TabType; label: string }[] = [
   { key: 'hour', label: 'By Hour' },
@@ -22,6 +22,7 @@ const TABS: { key: TabType; label: string }[] = [
   { key: 'pnl', label: 'P&L Distribution' },
   { key: 'market', label: 'Market Conditions' },
   { key: 'risk', label: 'Risk & Reward' },
+  { key: 'insights', label: 'Insights & Strategy' },
 ]
 
 const tooltipStyle = {
@@ -691,9 +692,165 @@ export function Statistics() {
             {activeTab === 'pnl' && renderPnlDistribution()}
             {activeTab === 'market' && renderMarketConditions()}
             {activeTab === 'risk' && renderRiskReward()}
+            {activeTab === 'insights' && renderInsights()}
           </>
         )}
       </div>
     </div>
   )
+
+  function renderInsights() {
+    if (!stats) return null
+    const { summary, detailed_summary: d, streak_data, insights } = stats
+
+    return (
+      <div className="space-y-6">
+        {/* AI Insights from backend */}
+        <div className="bg-surface-container rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-outline-variant/10 bg-surface-container-high flex items-center gap-2">
+            <Icon name="lightbulb" className="text-primary" />
+            <span className="text-xs font-label font-bold uppercase tracking-widest">Trading Insights & Patterns</span>
+          </div>
+          <div className="p-4 space-y-3">
+            {insights.length === 0 ? (
+              <p className="text-outline text-sm py-4 text-center">Not enough data to generate insights. Import more trades!</p>
+            ) : (
+              insights.map((insight, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'p-4 rounded-xl border-l-2 text-sm',
+                    insight.includes('⚠️') || insight.includes('🚨') || insight.includes('⛔') || insight.includes('❌')
+                      ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
+                      : insight.includes('✅') || insight.includes('🔥') || insight.includes('🎯')
+                      ? 'bg-secondary-container/10 border-secondary text-secondary'
+                      : 'bg-primary/5 border-primary text-on-surface-variant'
+                  )}
+                >
+                  {insight}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Strategy Action Items */}
+        <div className="bg-surface-container rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-outline-variant/10 bg-surface-container-high flex items-center gap-2">
+            <Icon name="target" className="text-primary" />
+            <span className="text-xs font-label font-bold uppercase tracking-widest">Strategy Action Items</span>
+          </div>
+          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+            {summary.win_rate < 50 && (
+              <div className="p-4 rounded-xl bg-tertiary-container/10 border border-tertiary-container/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="warning" className="text-tertiary text-lg" />
+                  <span className="font-semibold text-sm text-tertiary">Improve Entry Quality</span>
+                </div>
+                <p className="text-xs text-on-surface-variant">
+                  Win rate is {summary.win_rate.toFixed(1)}% (below 50%). Focus on higher probability setups and wait for better entries.
+                </p>
+              </div>
+            )}
+
+            {summary.profit_factor < 1 && (
+              <div className="p-4 rounded-xl bg-tertiary-container/10 border border-tertiary-container/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="trending_down" className="text-tertiary text-lg" />
+                  <span className="font-semibold text-sm text-tertiary">Cut Losses Faster</span>
+                </div>
+                <p className="text-xs text-on-surface-variant">
+                  Profit factor is {summary.profit_factor.toFixed(2)} (below 1.0). Losses outweigh gains. Consider tighter stops or smaller sizing.
+                </p>
+              </div>
+            )}
+
+            {streak_data.current_streak < -2 && (
+              <div className="p-4 rounded-xl bg-tertiary-container/10 border border-tertiary-container/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="pause_circle" className="text-tertiary text-lg" />
+                  <span className="font-semibold text-sm text-tertiary">Consider a Break</span>
+                </div>
+                <p className="text-xs text-on-surface-variant">
+                  You're on a {Math.abs(streak_data.current_streak)}-trade losing streak. Step back, review, and return fresh.
+                </p>
+              </div>
+            )}
+
+            {summary.win_rate >= 50 && summary.profit_factor >= 1.5 && (
+              <div className="p-4 rounded-xl bg-secondary-container/10 border border-secondary/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="emoji_events" className="text-secondary text-lg" />
+                  <span className="font-semibold text-sm text-secondary">Strong Performance</span>
+                </div>
+                <p className="text-xs text-on-surface-variant">
+                  Win rate {summary.win_rate.toFixed(1)}%, profit factor {summary.profit_factor.toFixed(2)}. Stay disciplined. Consider gradually increasing size.
+                </p>
+              </div>
+            )}
+
+            {d && d.avg_hold_time_winning > 0 && d.avg_hold_time_losing > 0 && d.avg_hold_time_losing > d.avg_hold_time_winning * 1.5 && (
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="timer" className="text-primary text-lg" />
+                  <span className="font-semibold text-sm text-primary">Holding Losers Too Long</span>
+                </div>
+                <p className="text-xs text-on-surface-variant">
+                  Avg losing hold time is {Math.round(d.avg_hold_time_losing)}min vs {Math.round(d.avg_hold_time_winning)}min for winners. Cut losers faster.
+                </p>
+              </div>
+            )}
+
+            {d && d.largest_loss > 0 && Math.abs(d.largest_loss) > d.largest_gain * 1.5 && (
+              <div className="p-4 rounded-xl bg-tertiary-container/10 border border-tertiary-container/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="shield" className="text-tertiary text-lg" />
+                  <span className="font-semibold text-sm text-tertiary">Risk Management Alert</span>
+                </div>
+                <p className="text-xs text-on-surface-variant">
+                  Largest loss ({formatCurrency(Math.abs(d.largest_loss))}) is significantly bigger than largest win ({formatCurrency(d.largest_gain)}). Tighten max loss per trade.
+                </p>
+              </div>
+            )}
+
+            {summary.win_rate >= 50 && summary.profit_factor >= 1 && summary.profit_factor < 1.5 && (
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="trending_up" className="text-primary text-lg" />
+                  <span className="font-semibold text-sm text-primary">Optimize Winners</span>
+                </div>
+                <p className="text-xs text-on-surface-variant">
+                  Winning rate is good but profit factor is moderate. Try letting winners run longer or scaling into winning positions.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Key Metrics Summary */}
+        {d && (
+          <div className="bg-surface-container rounded-xl overflow-hidden">
+            <div className="p-4 border-b border-outline-variant/10 bg-surface-container-high flex items-center gap-2">
+              <Icon name="assessment" className="text-primary" />
+              <span className="text-xs font-label font-bold uppercase tracking-widest">Detailed Performance Summary</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px] font-label">
+                <tbody className="divide-y divide-outline-variant/10">
+                  <tr><td className="p-3 text-outline">Total Gain/Loss</td><td className={cn('p-3 font-bold', getPnLColor(d.total_gain_loss))}>{formatCurrency(d.total_gain_loss)}</td><td className="p-3 text-outline">Largest Gain</td><td className="p-3 font-bold text-secondary">{formatCurrency(d.largest_gain)}</td></tr>
+                  <tr><td className="p-3 text-outline">Avg Daily P&L</td><td className={cn('p-3 font-bold', getPnLColor(d.avg_daily_pnl))}>{formatCurrency(d.avg_daily_pnl)}</td><td className="p-3 text-outline">Largest Loss</td><td className="p-3 font-bold text-tertiary">{formatCurrency(Math.abs(d.largest_loss))}</td></tr>
+                  <tr><td className="p-3 text-outline">Trading Days</td><td className="p-3 font-bold">{d.trading_days}</td><td className="p-3 text-outline">Avg Daily Volume</td><td className="p-3 font-bold">{Math.round(d.avg_daily_volume).toLocaleString()}</td></tr>
+                  <tr><td className="p-3 text-outline">Winning Trades</td><td className="p-3 font-bold text-secondary">{d.winning_trades} ({d.winning_pct.toFixed(1)}%)</td><td className="p-3 text-outline">Losing Trades</td><td className="p-3 font-bold text-tertiary">{d.losing_trades} ({d.losing_pct.toFixed(1)}%)</td></tr>
+                  <tr><td className="p-3 text-outline">Avg Winning Trade</td><td className="p-3 font-bold text-secondary">{formatCurrency(d.avg_winning_trade)}</td><td className="p-3 text-outline">Avg Losing Trade</td><td className="p-3 font-bold text-tertiary">{formatCurrency(Math.abs(d.avg_losing_trade))}</td></tr>
+                  <tr><td className="p-3 text-outline">Max Consecutive Wins</td><td className="p-3 font-bold">{d.max_consecutive_wins}</td><td className="p-3 text-outline">Max Consecutive Losses</td><td className="p-3 font-bold">{d.max_consecutive_losses}</td></tr>
+                  <tr><td className="p-3 text-outline">Profit Factor</td><td className="p-3 font-bold">{d.profit_factor.toFixed(2)}</td><td className="p-3 text-outline">P&L Std Dev</td><td className="p-3 font-bold">{formatCurrency(d.pnl_std_dev)}</td></tr>
+                  <tr><td className="p-3 text-outline">Total Commissions</td><td className="p-3 font-bold">{formatCurrency(d.total_commissions)}</td><td className="p-3 text-outline">Scratch Trades</td><td className="p-3 font-bold">{d.scratch_trades} ({d.scratch_pct.toFixed(1)}%)</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 }
