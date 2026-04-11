@@ -9,10 +9,10 @@ import {
 import { formatCurrency, cn, getPnLColor } from '@/lib/utils'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell
+  ResponsiveContainer, Cell, AreaChart, Area
 } from 'recharts'
 
-type TabType = 'hour' | 'day' | 'symbol' | 'holding' | 'pnl' | 'market' | 'risk' | 'insights'
+type TabType = 'hour' | 'day' | 'symbol' | 'holding' | 'pnl' | 'market' | 'risk' | 'insights' | 'charts'
 
 const TABS: { key: TabType; label: string }[] = [
   { key: 'hour', label: 'By Hour' },
@@ -23,6 +23,7 @@ const TABS: { key: TabType; label: string }[] = [
   { key: 'market', label: 'Market Conditions' },
   { key: 'risk', label: 'Risk & Reward' },
   { key: 'insights', label: 'Insights & Strategy' },
+  { key: 'charts', label: 'Charts & Equity' },
 ]
 
 const tooltipStyle = {
@@ -553,23 +554,20 @@ export function Statistics() {
     return (
       <div className="space-y-6 p-6">
         {/* Base Risk input */}
-        <div className="bg-surface-container rounded-xl p-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Icon name="shield" className="text-lg text-primary" />
-            <div>
-              <p className="text-[11px] font-label text-on-surface font-bold">Base Risk Setting</p>
-              <p className="text-[10px] font-label text-outline">Set your base risk per trade to calculate R-multiples</p>
-            </div>
+        <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-4 mb-6">
+          <Icon name="paid" className="text-primary text-2xl" />
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-on-surface">Base Risk Per Trade</h3>
+            <p className="text-xs text-outline">Set your base risk to calculate R-multiples.</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-label text-outline uppercase tracking-wider">Base Risk ($)</span>
+            <span className="text-xs text-outline">$</span>
             <input
               type="number"
               min="1"
-              step="1"
               value={baseRisk}
               onChange={(e) => setBaseRisk(Math.max(1, parseFloat(e.target.value) || 5))}
-              className="w-20 px-3 py-1.5 bg-surface-container-high border border-outline-variant/30 rounded-lg text-xs font-label text-on-surface focus:outline-none focus:border-primary"
+              className="w-20 px-3 py-1.5 bg-surface-container-high border border-outline-variant/20 rounded-lg text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
         </div>
@@ -693,11 +691,131 @@ export function Statistics() {
             {activeTab === 'market' && renderMarketConditions()}
             {activeTab === 'risk' && renderRiskReward()}
             {activeTab === 'insights' && renderInsights()}
+            {activeTab === 'charts' && renderCharts()}
           </>
         )}
       </div>
     </div>
   )
+
+  function renderCharts() {
+    if (!stats) return null
+    const dailyData = stats.daily_pnl
+
+    return (
+      <div className="space-y-6 p-6">
+        {/* Daily P&L Bar Chart */}
+        <div className="bg-surface-container rounded-xl p-4">
+          <h3 className="text-xs font-label uppercase tracking-widest text-outline mb-4">Daily P&L</h3>
+          <div style={{ height: 250 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.15} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  tick={{ fontSize: 10, fill: '#525252' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: '#525252' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }}
+                  formatter={(value) => [formatCurrency(Number(value)), 'P&L']}
+                />
+                <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
+                  {dailyData.map((entry, i) => (
+                    <Cell key={i} fill={entry.pnl >= 0 ? '#34d399' : '#ef4444'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Cumulative P&L Area Chart */}
+        <div className="bg-surface-container rounded-xl p-4">
+          <h3 className="text-xs font-label uppercase tracking-widest text-outline mb-4">Cumulative P&L</h3>
+          <div style={{ height: 250 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dailyData}>
+                <defs>
+                  <linearGradient id="cumulativeGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.15} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  tick={{ fontSize: 10, fill: '#525252' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: '#525252' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }}
+                  formatter={(value) => [formatCurrency(Number(value)), 'Cumulative P&L']}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="cumulative_pnl"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fill="url(#cumulativeGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Daily Win Rate Chart */}
+        <div className="bg-surface-container rounded-xl p-4">
+          <h3 className="text-xs font-label uppercase tracking-widest text-outline mb-4">Daily Win Rate</h3>
+          <div style={{ height: 250 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.15} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  tick={{ fontSize: 10, fill: '#525252' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: '#525252' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => `${v}%`}
+                  domain={[0, 100]}
+                />
+                <Tooltip
+                  contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }}
+                  formatter={(value) => [`${Number(value).toFixed(1)}%`, 'Win Rate']}
+                />
+                <Bar dataKey="win_rate" radius={[4, 4, 0, 0]}>
+                  {dailyData.map((entry, i) => (
+                    <Cell key={i} fill={entry.win_rate >= 50 ? '#34d399' : '#ef4444'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   function renderInsights() {
     if (!stats) return null
