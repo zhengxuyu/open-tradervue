@@ -158,7 +158,8 @@ export function Dashboard() {
                   />
                   <Tooltip
                     contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }}
-                    labelStyle={{ color: '#525252' }}
+                    labelStyle={{ color: '#a3a3a3' }}
+                    itemStyle={{ color: '#e5e5e5' }}
                     formatter={(value) => [formatCurrency(Number(value)), 'Cumulative P&L']}
                   />
                   <Area
@@ -183,7 +184,7 @@ export function Dashboard() {
                   <XAxis dataKey="date" hide />
                   <YAxis hide />
                   <Tooltip
-                    contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }}
+                    contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }} labelStyle={{ color: '#a3a3a3' }} itemStyle={{ color: '#e5e5e5' }}
                     formatter={(value) => [formatCurrency(Number(value)), 'P&L']}
                   />
                   <Bar dataKey="pnl" radius={[2, 2, 0, 0]} isAnimationActive={false}>
