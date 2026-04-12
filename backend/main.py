@@ -21,6 +21,7 @@ from .routes import trades_router, analysis_router, calendar_router, market_data
 from .routes.auth import router as auth_router
 from .routes.stripe import router as stripe_router
 from .routes.broker import router as broker_router
+from .routes.demo import router as demo_router
 
 
 @asynccontextmanager
@@ -75,6 +76,7 @@ app.include_router(calendar_router)
 app.include_router(market_data_router)
 app.include_router(journal_router)
 app.include_router(broker_router)
+app.include_router(demo_router)
 
 
 @app.get("/")

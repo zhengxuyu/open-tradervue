@@ -13,6 +13,7 @@ import {
   type DailyPnlData,
   type Position,
 } from '@/services/api'
+import api from '@/services/api'
 import { formatCurrency } from '@/lib/utils'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -34,6 +35,27 @@ export function Dashboard() {
           getAdvancedStatistics(),
           getPositions({ status: 'open' }),
         ])
+        // Auto-seed demo data for new users
+        if (summaryData.total_trades === 0) {
+          try {
+            await api.post('/demo/seed')
+            // Re-fetch after seeding
+            const [newSummary, newTrades, newStats, newPositions] = await Promise.all([
+              getAnalysisSummary(),
+              getTrades({ limit: 10 }),
+              getAdvancedStatistics(),
+              getPositions({ status: 'open' }),
+            ])
+            setSummary(newSummary)
+            setRecentTrades(newTrades)
+            setDailyPnl(newStats.daily_pnl.slice(-30))
+            setOpenPositions(newPositions)
+            return
+          } catch (e) {
+            console.error('Failed to seed demo data:', e)
+          }
+        }
+
         setSummary(summaryData)
         setRecentTrades(tradesData)
         setDailyPnl(statsData.daily_pnl.slice(-30))
