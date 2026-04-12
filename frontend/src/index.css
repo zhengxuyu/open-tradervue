@@ -1,49 +1,111 @@
 @import "tailwindcss";
 
 @theme {
-  /* Carbon Emerald: pure carbon black + emerald green */
-  --color-surface: #080a09;
-  --color-surface-container-lowest: #040504;
-  --color-surface-container-low: #0c0f0e;
-  --color-surface-container: #111413;
-  --color-surface-container-high: #1a1f1d;
-  --color-surface-container-highest: #252a28;
-  --color-surface-variant: #252a28;
-  --color-surface-bright: #333835;
+  --color-surface: var(--theme-surface);
+  --color-surface-container-lowest: var(--theme-surface-container-lowest);
+  --color-surface-container-low: var(--theme-surface-container-low);
+  --color-surface-container: var(--theme-surface-container);
+  --color-surface-container-high: var(--theme-surface-container-high);
+  --color-surface-container-highest: var(--theme-surface-container-highest);
+  --color-surface-variant: var(--theme-surface-variant);
+  --color-surface-bright: var(--theme-surface-bright);
 
-  --color-on-surface: #e5e5e5;
-  --color-on-surface-variant: #a3a3a3;
-  --color-outline: #525252;
-  --color-outline-variant: #2a2f2d;
+  --color-on-surface: var(--theme-on-surface);
+  --color-on-surface-variant: var(--theme-on-surface-variant);
+  --color-outline: var(--theme-outline);
+  --color-outline-variant: var(--theme-outline-variant);
 
-  /* Emerald primary */
-  --color-primary: #10b981;
-  --color-primary-container: #059669;
-  --color-on-primary: #022c22;
-  --color-on-primary-container: #064e3b;
+  --color-primary: var(--theme-primary);
+  --color-primary-container: var(--theme-primary-container);
+  --color-on-primary: var(--theme-on-primary);
+  --color-on-primary-container: var(--theme-on-primary-container);
 
-  /* Green for profit */
-  --color-secondary: #34d399;
-  --color-secondary-container: #059669;
-  --color-on-secondary-container: #022c22;
+  --color-secondary: var(--theme-secondary);
+  --color-secondary-container: var(--theme-secondary-container);
+  --color-on-secondary-container: var(--theme-on-secondary-container);
 
-  /* Red for loss */
-  --color-tertiary: #f87171;
-  --color-tertiary-container: #ef4444;
-  --color-on-tertiary-container: #450a0a;
+  --color-tertiary: var(--theme-tertiary);
+  --color-tertiary-container: var(--theme-tertiary-container);
+  --color-on-tertiary-container: var(--theme-on-tertiary-container);
 
-  --color-error: #fca5a5;
-  --color-error-container: #991b1b;
+  --color-error: var(--theme-error);
+  --color-error-container: var(--theme-error-container);
 
   --font-family-headline: 'Inter', sans-serif;
   --font-family-body: 'Inter', sans-serif;
   --font-family-label: 'Space Grotesk', monospace;
 }
 
+/* Carbon Emerald — Dark Theme */
+.dark {
+  --theme-surface: #080a09;
+  --theme-surface-container-lowest: #040504;
+  --theme-surface-container-low: #0c0f0e;
+  --theme-surface-container: #111413;
+  --theme-surface-container-high: #1a1f1d;
+  --theme-surface-container-highest: #252a28;
+  --theme-surface-variant: #252a28;
+  --theme-surface-bright: #333835;
+
+  --theme-on-surface: #e5e5e5;
+  --theme-on-surface-variant: #a3a3a3;
+  --theme-outline: #525252;
+  --theme-outline-variant: #2a2f2d;
+
+  --theme-primary: #10b981;
+  --theme-primary-container: #059669;
+  --theme-on-primary: #022c22;
+  --theme-on-primary-container: #064e3b;
+
+  --theme-secondary: #34d399;
+  --theme-secondary-container: #059669;
+  --theme-on-secondary-container: #022c22;
+
+  --theme-tertiary: #f87171;
+  --theme-tertiary-container: #ef4444;
+  --theme-on-tertiary-container: #450a0a;
+
+  --theme-error: #fca5a5;
+  --theme-error-container: #991b1b;
+}
+
+/* Morandi Day — Light Theme */
+:root:not(.dark) {
+  --theme-surface: #f0ebe4;
+  --theme-surface-container-lowest: #ffffff;
+  --theme-surface-container-low: #f5f2ec;
+  --theme-surface-container: #f9f6f1;
+  --theme-surface-container-high: #eee8e0;
+  --theme-surface-container-highest: #e4ddd4;
+  --theme-surface-variant: #e4ddd4;
+  --theme-surface-bright: #faf8f4;
+
+  --theme-on-surface: #3d3630;
+  --theme-on-surface-variant: #78716c;
+  --theme-outline: #a89e92;
+  --theme-outline-variant: #ddd5ca;
+
+  --theme-primary: #6b8ea0;
+  --theme-primary-container: #5a7d8f;
+  --theme-on-primary: #ffffff;
+  --theme-on-primary-container: #2a4a5a;
+
+  --theme-secondary: #6a9e86;
+  --theme-secondary-container: #4a8a6e;
+  --theme-on-secondary-container: #1a3d2a;
+
+  --theme-tertiary: #c07070;
+  --theme-tertiary-container: #a85555;
+  --theme-on-tertiary-container: #4a1a1a;
+
+  --theme-error: #c07070;
+  --theme-error-container: #f5dada;
+}
+
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #080a09;
-  color: #e5e5e5;
+  background-color: var(--theme-surface);
+  color: var(--theme-on-surface);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -65,9 +127,9 @@ body {
 }
 
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #080a09; }
-::-webkit-scrollbar-thumb { background: #252a28; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #333835; }
+::-webkit-scrollbar-track { background: var(--theme-surface); }
+::-webkit-scrollbar-thumb { background: var(--theme-surface-container-highest); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--theme-surface-bright); }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

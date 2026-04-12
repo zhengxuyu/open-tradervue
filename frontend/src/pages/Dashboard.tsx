@@ -18,6 +18,7 @@ import { formatCurrency } from '@/lib/utils'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
+import { getChartColors } from '@/lib/chartColors'
 
 export function Dashboard() {
   const [summary, setSummary] = useState<AnalysisSummary | null>(null)
@@ -69,6 +70,8 @@ export function Dashboard() {
     fetchData()
   }, [])
 
+  const colors = getChartColors()
+
   if (loading) {
     return (
       <>
@@ -119,7 +122,7 @@ export function Dashboard() {
           <div className="bg-surface-container p-6 rounded-xl flex items-center justify-between">
             <div>
               <p className="text-xs font-label uppercase tracking-widest text-slate-400 mb-2">Win Rate</p>
-              <p className="text-4xl font-headline font-extrabold text-white font-data">
+              <p className="text-4xl font-headline font-extrabold text-on-surface font-data">
                 {(summary?.win_rate || 0).toFixed(1)}%
               </p>
             </div>
@@ -127,7 +130,7 @@ export function Dashboard() {
 
           <div className="bg-surface-container p-6 rounded-xl">
             <p className="text-xs font-label uppercase tracking-widest text-slate-400 mb-2">Total Trades</p>
-            <p className="text-4xl font-headline font-extrabold text-white font-data">
+            <p className="text-4xl font-headline font-extrabold text-on-surface font-data">
               {(summary?.total_trades || 0).toLocaleString()}
             </p>
             <div className="mt-4 flex items-center gap-4">
@@ -153,7 +156,7 @@ export function Dashboard() {
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-surface-container p-6 rounded-xl">
-            <h3 className="text-sm font-headline font-bold text-white uppercase tracking-wider mb-6">
+            <h3 className="text-sm font-headline font-bold text-on-surface uppercase tracking-wider mb-6">
               Cumulative Performance
             </h3>
             <div className="h-64">
@@ -161,33 +164,33 @@ export function Dashboard() {
                 <AreaChart data={dailyPnl}>
                   <defs>
                     <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.2} />
-                      <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                      <stop offset="0%" stopColor={colors.primary} stopOpacity={0.2} />
+                      <stop offset="100%" stopColor={colors.primary} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis
                     dataKey="date"
                     tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    tick={{ fontSize: 10, fill: '#525252' }}
+                    tick={{ fontSize: 10, fill: colors.textMuted }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 10, fill: '#525252' }}
+                    tick={{ fontSize: 10, fill: colors.textMuted }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
                   />
                   <Tooltip
-                    contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }}
-                    labelStyle={{ color: '#a3a3a3' }}
-                    itemStyle={{ color: '#e5e5e5' }}
+                    contentStyle={{ background: colors.background, border: 'none', borderRadius: 8, fontSize: 12, color: colors.text }}
+                    labelStyle={{ color: colors.labelMuted }}
+                    itemStyle={{ color: colors.text }}
                     formatter={(value) => [formatCurrency(Number(value)), 'Cumulative P&L']}
                   />
                   <Area
                     type="monotone"
                     dataKey="cumulative_pnl"
-                    stroke="#10b981"
+                    stroke={colors.primary}
                     strokeWidth={2}
                     fill="url(#pnlGradient)"
                   />
@@ -197,7 +200,7 @@ export function Dashboard() {
           </div>
 
           <div className="bg-surface-container p-6 rounded-xl">
-            <h3 className="text-sm font-headline font-bold text-white uppercase tracking-wider mb-6">
+            <h3 className="text-sm font-headline font-bold text-on-surface uppercase tracking-wider mb-6">
               Daily P&L
             </h3>
             <div className="h-64">
@@ -206,12 +209,12 @@ export function Dashboard() {
                   <XAxis dataKey="date" hide />
                   <YAxis hide />
                   <Tooltip
-                    contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }} labelStyle={{ color: '#a3a3a3' }} itemStyle={{ color: '#e5e5e5' }}
+                    contentStyle={{ background: colors.background, border: 'none', borderRadius: 8, fontSize: 12, color: colors.text }} labelStyle={{ color: colors.labelMuted }} itemStyle={{ color: colors.text }}
                     formatter={(value) => [formatCurrency(Number(value)), 'P&L']}
                   />
                   <Bar dataKey="pnl" radius={[2, 2, 0, 0]} isAnimationActive={false}>
                     {dailyPnl.map((entry, index) => (
-                      <Cell key={index} fill={entry.pnl >= 0 ? '#34d399' : '#ef4444'} />
+                      <Cell key={index} fill={entry.pnl >= 0 ? colors.profit : colors.loss} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -244,7 +247,7 @@ export function Dashboard() {
         {/* Recent Trades */}
         <div className="bg-surface-container rounded-xl overflow-hidden">
           <div className="p-6 border-b border-outline-variant/10 flex justify-between items-center">
-            <h3 className="text-sm font-headline font-bold text-white uppercase tracking-wider">
+            <h3 className="text-sm font-headline font-bold text-on-surface uppercase tracking-wider">
               Recent Executions
             </h3>
           </div>
@@ -252,7 +255,7 @@ export function Dashboard() {
           <div className="p-4 bg-surface-container-low border-t border-outline-variant/10 text-center">
             <Link
               to="/trades"
-              className="text-[10px] font-label font-bold text-primary uppercase tracking-widest hover:text-white transition-colors"
+              className="text-[10px] font-label font-bold text-primary uppercase tracking-widest hover:text-on-surface transition-colors"
             >
               View All Trade History
             </Link>
