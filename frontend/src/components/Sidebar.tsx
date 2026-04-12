@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Icon } from './Icon'
+import { ThemeToggle } from './ThemeToggle'
 import { cn } from '@/lib/utils'
 import { getStoredUser, logout } from '@/services/auth'
 
@@ -26,7 +27,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
     <aside className="fixed left-0 top-0 bottom-0 z-40 h-full w-64 border-r border-outline-variant/20 bg-surface-container-low font-body antialiased">
       <div className="flex flex-col h-full">
         <div className="p-6 mb-2">
-          <h1 className="text-lg font-bold tracking-tight text-white">Open Tradervue</h1>
+          <h1 className="text-lg font-bold tracking-tight text-on-surface">Open Tradervue</h1>
           <p className="text-xs font-label uppercase tracking-widest text-primary/60 mt-1">
             Pro Account
           </p>
@@ -64,7 +65,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               <Icon name="person" className="text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">
+              <p className="text-sm font-semibold text-on-surface truncate">
                 {user?.username || 'Account'}
               </p>
               <div className="flex items-center gap-2">
@@ -89,6 +90,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                 </button>
               </div>
             </div>
+            <ThemeToggle />
           </div>
         </div>
       </div>

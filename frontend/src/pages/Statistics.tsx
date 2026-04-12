@@ -11,6 +11,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, AreaChart, Area
 } from 'recharts'
+import { getChartColors } from '@/lib/chartColors'
 
 type TabType = 'hour' | 'day' | 'symbol' | 'holding' | 'pnl' | 'market' | 'risk' | 'insights' | 'charts'
 
@@ -26,17 +27,22 @@ const TABS: { key: TabType; label: string }[] = [
   { key: 'charts', label: 'Charts & Equity' },
 ]
 
-const tooltipStyle = {
-  backgroundColor: '#111413',
-  border: '1px solid #2a2f2d',
-  borderRadius: '8px',
-  fontSize: '11px',
-  color: '#e5e5e5',
+function getTooltipStyles() {
+  const c = getChartColors()
+  return {
+    tooltipStyle: {
+      backgroundColor: c.background,
+      border: `1px solid ${c.border}`,
+      borderRadius: '8px',
+      fontSize: '11px',
+      color: c.text,
+    },
+    tooltipLabelStyle: { color: c.labelMuted },
+    tooltipItemStyle: { color: c.text },
+    axisTickStyle: { fill: c.textMuted, fontSize: 10 },
+    colors: c,
+  }
 }
-const tooltipLabelStyle = { color: '#a3a3a3' }
-const tooltipItemStyle = { color: '#e5e5e5' }
-
-const axisTickStyle = { fill: 'var(--color-outline)', fontSize: 10 }
 
 export function Statistics() {
   const [stats, setStats] = useState<AdvancedStatistics | null>(null)
@@ -46,6 +52,8 @@ export function Statistics() {
   const [fetchingMarketData, setFetchingMarketData] = useState(false)
   const [marketDataMessage, setMarketDataMessage] = useState<string | null>(null)
   const [baseRisk, setBaseRisk] = useState(5)
+
+  const { tooltipStyle, tooltipLabelStyle, tooltipItemStyle, axisTickStyle, colors: chartColors } = getTooltipStyles()
 
   const fetchStats = async () => {
     setLoading(true)
@@ -108,7 +116,7 @@ export function Statistics() {
                 <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value) => [formatCurrency(Number(value)), 'Avg P&L']} labelFormatter={(v) => `${v}:00`} />
                 <Bar dataKey="avg_pnl" radius={[4, 4, 0, 0]}>
                   {hourData.map((entry, i) => (
-                    <Cell key={i} fill={entry.avg_pnl >= 0 ? '#34d399' : '#ef4444'} />
+                    <Cell key={i} fill={entry.avg_pnl >= 0 ? chartColors.profit : chartColors.loss} />
                   ))}
                 </Bar>
               </BarChart>
@@ -164,7 +172,7 @@ export function Statistics() {
                 <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value) => [formatCurrency(Number(value)), 'Avg P&L']} />
                 <Bar dataKey="avg_pnl" radius={[4, 4, 0, 0]}>
                   {dayData.map((entry, i) => (
-                    <Cell key={i} fill={entry.avg_pnl >= 0 ? '#34d399' : '#ef4444'} />
+                    <Cell key={i} fill={entry.avg_pnl >= 0 ? chartColors.profit : chartColors.loss} />
                   ))}
                 </Bar>
               </BarChart>
@@ -220,7 +228,7 @@ export function Statistics() {
                 <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value) => [formatCurrency(Number(value)), 'P&L']} />
                 <Bar dataKey="total_pnl" radius={[0, 4, 4, 0]}>
                   {sortedByPnl.slice(0, 20).map((entry, i) => (
-                    <Cell key={i} fill={entry.total_pnl >= 0 ? '#34d399' : '#ef4444'} />
+                    <Cell key={i} fill={entry.total_pnl >= 0 ? chartColors.profit : chartColors.loss} />
                   ))}
                 </Bar>
               </BarChart>
@@ -286,7 +294,7 @@ export function Statistics() {
                 <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value) => [formatCurrency(Number(value)), 'Avg P&L']} />
                 <Bar dataKey="avg_pnl" radius={[0, 4, 4, 0]}>
                   {holdData.map((entry, i) => (
-                    <Cell key={i} fill={entry.avg_pnl >= 0 ? '#34d399' : '#ef4444'} />
+                    <Cell key={i} fill={entry.avg_pnl >= 0 ? chartColors.profit : chartColors.loss} />
                   ))}
                 </Bar>
               </BarChart>
@@ -350,7 +358,7 @@ export function Statistics() {
                   <Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} formatter={(value) => [`${Number(value)} trades`, 'Count']} />
                   <Bar dataKey="trade_count" radius={[4, 4, 0, 0]}>
                     {distData.map((entry, i) => (
-                      <Cell key={i} fill={entry.range_label.startsWith('-') || entry.range_label.startsWith('< -') ? '#ef4444' : '#34d399'} />
+                      <Cell key={i} fill={entry.range_label.startsWith('-') || entry.range_label.startsWith('< -') ? chartColors.loss : chartColors.profit} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -716,22 +724,22 @@ export function Statistics() {
                 <XAxis
                   dataKey="date"
                   tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  tick={{ fontSize: 10, fill: '#525252' }}
+                  tick={{ fontSize: 10, fill: chartColors.textMuted }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: '#525252' }}
+                  tick={{ fontSize: 10, fill: chartColors.textMuted }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip
-                  contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }}
+                  contentStyle={{ background: chartColors.background, border: 'none', borderRadius: 8, fontSize: 12, color: chartColors.text }}
                   formatter={(value) => [formatCurrency(Number(value)), 'P&L']}
                 />
                 <Bar dataKey="pnl" radius={[4, 4, 0, 0]}>
                   {dailyData.map((entry, i) => (
-                    <Cell key={i} fill={entry.pnl >= 0 ? '#34d399' : '#ef4444'} />
+                    <Cell key={i} fill={entry.pnl >= 0 ? chartColors.profit : chartColors.loss} />
                   ))}
                 </Bar>
               </BarChart>
@@ -747,32 +755,32 @@ export function Statistics() {
               <AreaChart data={dailyData}>
                 <defs>
                   <linearGradient id="cumulativeGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                    <stop offset="0%" stopColor={chartColors.primary} stopOpacity={0.3} />
+                    <stop offset="100%" stopColor={chartColors.primary} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-outline-variant)" strokeOpacity={0.15} />
                 <XAxis
                   dataKey="date"
                   tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  tick={{ fontSize: 10, fill: '#525252' }}
+                  tick={{ fontSize: 10, fill: chartColors.textMuted }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: '#525252' }}
+                  tick={{ fontSize: 10, fill: chartColors.textMuted }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
                 />
                 <Tooltip
-                  contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }}
+                  contentStyle={{ background: chartColors.background, border: 'none', borderRadius: 8, fontSize: 12, color: chartColors.text }}
                   formatter={(value) => [formatCurrency(Number(value)), 'Cumulative P&L']}
                 />
                 <Area
                   type="monotone"
                   dataKey="cumulative_pnl"
-                  stroke="#10b981"
+                  stroke={chartColors.primary}
                   strokeWidth={2}
                   fill="url(#cumulativeGradient)"
                 />
@@ -791,24 +799,24 @@ export function Statistics() {
                 <XAxis
                   dataKey="date"
                   tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  tick={{ fontSize: 10, fill: '#525252' }}
+                  tick={{ fontSize: 10, fill: chartColors.textMuted }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: '#525252' }}
+                  tick={{ fontSize: 10, fill: chartColors.textMuted }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v) => `${v}%`}
                   domain={[0, 100]}
                 />
                 <Tooltip
-                  contentStyle={{ background: '#111413', border: 'none', borderRadius: 8, fontSize: 12, color: '#e5e5e5' }}
+                  contentStyle={{ background: chartColors.background, border: 'none', borderRadius: 8, fontSize: 12, color: chartColors.text }}
                   formatter={(value) => [`${Number(value).toFixed(1)}%`, 'Win Rate']}
                 />
                 <Bar dataKey="win_rate" radius={[4, 4, 0, 0]}>
                   {dailyData.map((entry, i) => (
-                    <Cell key={i} fill={entry.win_rate >= 50 ? '#34d399' : '#ef4444'} />
+                    <Cell key={i} fill={entry.win_rate >= 50 ? chartColors.profit : chartColors.loss} />
                   ))}
                 </Bar>
               </BarChart>

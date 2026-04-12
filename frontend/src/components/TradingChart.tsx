@@ -3,6 +3,7 @@ import { createChart, ColorType, CrosshairMode, type IChartApi, type ISeriesApi,
 import type { KlineData } from '@/services/api'
 import { getKline } from '@/services/api'
 import { Icon } from './Icon'
+import { getChartColors } from '@/lib/chartColors'
 
 interface TradeMarker {
   id: number
@@ -72,15 +73,17 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
     const containerHeight = isFullscreen ? window.innerHeight - 120 : height
 
-    // Create chart with dark theme
+    const colors = getChartColors()
+
+    // Create chart with theme colors
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#080a09' },
-        textColor: '#525252',
+        background: { type: ColorType.Solid, color: colors.surface },
+        textColor: colors.textMuted,
       },
       grid: {
-        vertLines: { color: 'rgba(65, 71, 83, 0.15)' },
-        horzLines: { color: 'rgba(65, 71, 83, 0.15)' },
+        vertLines: { color: colors.grid },
+        horzLines: { color: colors.grid },
       },
       width: chartContainerRef.current.clientWidth,
       height: containerHeight,
@@ -88,27 +91,27 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
         mode: CrosshairMode.Normal,
         vertLine: {
           width: 1,
-          color: '#10b981',
+          color: colors.primary,
           style: 2,
-          labelBackgroundColor: '#10b981',
+          labelBackgroundColor: colors.primary,
         },
         horzLine: {
           width: 1,
-          color: '#10b981',
+          color: colors.primary,
           style: 2,
-          labelBackgroundColor: '#10b981',
+          labelBackgroundColor: colors.primary,
         },
       },
       timeScale: {
         timeVisible: true,
         secondsVisible: interval === '1min',
-        borderColor: 'rgba(65, 71, 83, 0.15)',
+        borderColor: colors.grid,
         rightOffset: 10,
         barSpacing: 8,
         minBarSpacing: 2,
       },
       rightPriceScale: {
-        borderColor: 'rgba(65, 71, 83, 0.15)',
+        borderColor: colors.grid,
         scaleMargins: {
           top: 0.1,
           bottom: 0.2,
@@ -131,12 +134,12 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
     // Add candlestick series with design tokens
     const candlestickSeries = chart.addCandlestickSeries({
-      upColor: '#059669',
-      downColor: '#ef4444',
-      borderUpColor: '#059669',
-      borderDownColor: '#ef4444',
-      wickUpColor: '#059669',
-      wickDownColor: '#ef4444',
+      upColor: colors.profitContainer,
+      downColor: colors.lossContainer,
+      borderUpColor: colors.profitContainer,
+      borderDownColor: colors.lossContainer,
+      wickUpColor: colors.profitContainer,
+      wickDownColor: colors.lossContainer,
     })
 
     seriesRef.current = candlestickSeries
@@ -182,7 +185,7 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
       return {
         time: timeValue as Time,
         value: k.volume,
-        color: k.close >= k.open ? 'rgba(30, 162, 150, 0.3)' : 'rgba(255, 103, 98, 0.3)',
+        color: k.close >= k.open ? `${colors.profitContainer}4D` : `${colors.lossContainer}4D`,
       }
     })
 
@@ -207,7 +210,7 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
         return {
           time: timeValue as Time,
           position: trade.side === 'BUY' ? 'belowBar' as const : 'aboveBar' as const,
-          color: trade.side === 'BUY' ? '#059669' : '#ef4444',
+          color: trade.side === 'BUY' ? colors.profitContainer : colors.lossContainer,
           shape: trade.side === 'BUY' ? 'arrowUp' as const : 'arrowDown' as const,
           text: `${trade.side} ${trade.quantity}@${trade.price.toFixed(2)}`,
           size: 2,

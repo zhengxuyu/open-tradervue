@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, memo, useCallback } from 'react'
+import { getChartColors } from '@/lib/chartColors'
 
 interface TradingViewWidgetProps {
   symbol: string
@@ -54,6 +55,9 @@ function TradingViewWidgetComponent({
     const initWidget = () => {
       if (!containerRef.current || !window.TradingView) return
 
+      const colors = getChartColors()
+      const isDark = document.documentElement.classList.contains('dark')
+
       // Clear previous widget
       containerRef.current.innerHTML = ''
 
@@ -69,10 +73,10 @@ function TradingViewWidgetComponent({
         symbol: currentSymbol,
         interval: interval,
         timezone: 'Asia/Shanghai',
-        theme: 'dark',
+        theme: isDark ? 'dark' : 'light',
         style: '1', // Candlestick
         locale: 'zh_CN',
-        toolbar_bg: '#080a09',
+        toolbar_bg: colors.surface,
         enable_publishing: false,
         allow_symbol_change: true,
         save_image: true,
@@ -96,22 +100,22 @@ function TradingViewWidgetComponent({
           'save_chart_properties_to_local_storage',
         ],
         overrides: {
-          'paneProperties.background': '#080a09',
+          'paneProperties.background': colors.surface,
           'paneProperties.backgroundType': 'solid',
-          'paneProperties.vertGridProperties.color': 'rgba(65, 71, 83, 0.15)',
-          'paneProperties.horzGridProperties.color': 'rgba(65, 71, 83, 0.15)',
-          'mainSeriesProperties.candleStyle.upColor': '#059669',
-          'mainSeriesProperties.candleStyle.downColor': '#ef4444',
-          'mainSeriesProperties.candleStyle.borderUpColor': '#059669',
-          'mainSeriesProperties.candleStyle.borderDownColor': '#ef4444',
-          'mainSeriesProperties.candleStyle.wickUpColor': '#059669',
-          'mainSeriesProperties.candleStyle.wickDownColor': '#ef4444',
-          'scalesProperties.textColor': '#525252',
-          'scalesProperties.lineColor': 'rgba(65, 71, 83, 0.15)',
+          'paneProperties.vertGridProperties.color': colors.grid,
+          'paneProperties.horzGridProperties.color': colors.grid,
+          'mainSeriesProperties.candleStyle.upColor': colors.profitContainer,
+          'mainSeriesProperties.candleStyle.downColor': colors.lossContainer,
+          'mainSeriesProperties.candleStyle.borderUpColor': colors.profitContainer,
+          'mainSeriesProperties.candleStyle.borderDownColor': colors.lossContainer,
+          'mainSeriesProperties.candleStyle.wickUpColor': colors.profitContainer,
+          'mainSeriesProperties.candleStyle.wickDownColor': colors.lossContainer,
+          'scalesProperties.textColor': colors.textMuted,
+          'scalesProperties.lineColor': colors.grid,
         },
         loading_screen: {
-          backgroundColor: '#080a09',
-          foregroundColor: '#10b981',
+          backgroundColor: colors.surface,
+          foregroundColor: colors.primary,
         },
       })
     }
