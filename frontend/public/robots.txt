@@ -1,3 +1,13 @@
 User-agent: *
 Allow: /
+Disallow: /trades
+Disallow: /calendar
+Disallow: /journal
+Disallow: /analysis
+Disallow: /statistics
+Disallow: /charts
+Disallow: /import
+Disallow: /settings
+Disallow: /positions
+
 Sitemap: https://tradejournal.dev/sitemap.xml
