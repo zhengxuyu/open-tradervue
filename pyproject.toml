@@ -25,6 +25,7 @@ dependencies = [
     "gunicorn>=21.0.0",
     "stripe>=8.0.0",
     "snaptrade-python-sdk>=11.0.0",
+    "slowapi>=0.1.9",
 ]
 
 [project.scripts]

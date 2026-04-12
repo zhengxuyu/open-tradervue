@@ -125,9 +125,9 @@ export function Journal() {
     <div className="flex flex-col h-full">
       <TopAppBar title="Journal" />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Left panel - History */}
-        <div className="w-[30%] border-r border-[#111413] bg-surface-container-low flex flex-col">
+        <div className="w-full lg:w-[30%] border-b lg:border-b-0 lg:border-r border-[#111413] bg-surface-container-low flex flex-col">
           <div className="p-4 flex items-center justify-between border-b border-[#111413]">
             <span className="font-label text-xs font-bold text-outline uppercase tracking-wider">History</span>
             <div className="flex items-center gap-2">
@@ -199,7 +199,7 @@ export function Journal() {
         </div>
 
         {/* Right panel - Editor */}
-        <div className="w-[70%] bg-surface flex flex-col overflow-auto">
+        <div className="w-full lg:w-[70%] bg-surface flex flex-col overflow-auto">
           {loading ? (
             <div className="flex-1 flex items-center justify-center text-outline">
               <Icon name="progress_activity" className="text-3xl animate-spin" />
@@ -246,7 +246,7 @@ export function Journal() {
               </div>
 
               {/* Stats header */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
                   <p className="text-[10px] font-label font-bold text-outline uppercase tracking-wider mb-1">Daily P&L</p>
                   <p className={cn('font-label text-xl font-extrabold tabular-nums', getPnLColor(pnl))}>
