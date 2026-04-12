@@ -13,6 +13,7 @@ from ..schemas import (
     CSVTextPreviewRequest, CSVTextImportRequest
 )
 from ..services.csv_import import CSVImportService
+from .demo import cleanup_demo_trades
 
 router = APIRouter(prefix="/api/trades", tags=["trades"])
 
@@ -70,6 +71,9 @@ async def create_trade(trade: TradeCreate, db: AsyncSession = Depends(get_db), c
     db.add(db_trade)
     await db.commit()
     await db.refresh(db_trade)
+    # Clean up demo trades when user adds their first real trade
+    if trade.notes != 'Demo trade':
+        await cleanup_demo_trades(current_user.id, db)
     return db_trade
 
 
@@ -142,7 +146,10 @@ async def import_csv(
         import json
         field_mapping = CSVFieldMapping(**json.loads(mapping))
 
-    return await service.import_csv(content.decode('utf-8'), db, field_mapping, timezone, user_id=current_user.id)
+    result = await service.import_csv(content.decode('utf-8'), db, field_mapping, timezone, user_id=current_user.id)
+    if result.imported_count > 0:
+        await cleanup_demo_trades(current_user.id, db)
+    return result
 
 
 @router.post("/import-text", response_model=ImportResult)
@@ -155,10 +162,13 @@ async def import_csv_text(
         raise HTTPException(status_code=400, detail="Content cannot be empty")
 
     service = CSVImportService()
-    return await service.import_csv(
+    result = await service.import_csv(
         request.content,
         db,
         request.mapping,
         request.timezone,
         user_id=current_user.id,
     )
+    if result.imported_count > 0:
+        await cleanup_demo_trades(current_user.id, db)
+    return result

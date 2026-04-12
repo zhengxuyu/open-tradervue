@@ -12,6 +12,7 @@ from ..database import get_db
 from ..models.broker_connection import BrokerConnection
 from ..models.trade import Trade
 from ..services import snaptrade_service
+from .demo import cleanup_demo_trades
 
 logger = logging.getLogger("tradervue.broker")
 
@@ -170,6 +171,8 @@ async def import_broker_trades(
         imported += 1
 
     await db.commit()
+    if imported > 0:
+        await cleanup_demo_trades(current_user.id, db)
     return {"imported": imported, "skipped": skipped, "total": len(activities)}
 
 
