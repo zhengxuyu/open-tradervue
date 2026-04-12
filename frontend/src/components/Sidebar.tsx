@@ -14,7 +14,11 @@ const navigation = [
   { name: 'Charts', href: '/charts', icon: 'show_chart' },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void
+}
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const location = useLocation()
   const user = getStoredUser()
 
@@ -39,6 +43,7 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 to={item.href}
+                onClick={() => onNavigate?.()}
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors duration-200',
                   isActive
@@ -65,6 +70,7 @@ export function Sidebar() {
               <div className="flex items-center gap-2">
                 <Link
                   to="/settings"
+                  onClick={() => onNavigate?.()}
                   className={cn(
                     'text-xs font-label transition-colors',
                     location.pathname === '/settings'
