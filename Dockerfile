@@ -23,9 +23,9 @@ COPY frontend/ frontend/
 RUN cd frontend && npm install && npm run build
 
 # Build dayTradeDash frontend (private repo, needs GITHUB_TOKEN)
-# ADD forces cache invalidation when the remote repo changes
+# Change DASH_VERSION to bust cache when dayTradeDash updates
 ARG GITHUB_TOKEN=""
-ADD https://api.github.com/repos/zhengxuyu/dayTradeDash/git/refs/heads/main /tmp/dash-version.json
+ARG DASH_VERSION=1
 RUN if [ -n "$GITHUB_TOKEN" ]; then \
       git clone --depth 1 https://x-access-token:${GITHUB_TOKEN}@github.com/zhengxuyu/dayTradeDash.git /tmp/dash-src && \
       cd /tmp/dash-src/frontend && npm install && VITE_API_URL=/api npx vite build --base=/dash/ && \
