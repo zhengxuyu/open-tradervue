@@ -23,7 +23,7 @@ logger = logging.getLogger("tradervue")
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
 from .database import init_db
-from .routes import trades_router, analysis_router, calendar_router, market_data_router, journal_router
+from .routes import trades_router, analysis_router, calendar_router, market_data_router, journal_router, scanner_router
 from .routes.auth import router as auth_router
 from .routes.stripe import router as stripe_router
 from .routes.broker import router as broker_router
@@ -88,6 +88,7 @@ app.include_router(market_data_router)
 app.include_router(journal_router)
 app.include_router(broker_router)
 app.include_router(demo_router)
+app.include_router(scanner_router)
 
 
 @app.get("/")
@@ -103,6 +104,12 @@ async def health():
 # Serve frontend static files in production
 import os as _os
 from pathlib import Path as _Path
+
+# Serve Day Trade Dash frontend at /dash
+_dash_dist = _Path(__file__).parent.parent / "dash" / "dist"
+if _dash_dist.is_dir():
+    from fastapi.staticfiles import StaticFiles as _DashStaticFiles
+    app.mount("/dash", _DashStaticFiles(directory=str(_dash_dist), html=True), name="dash")
 
 _frontend_dist = _Path(__file__).parent.parent / "frontend" / "dist"
 if _frontend_dist.is_dir():

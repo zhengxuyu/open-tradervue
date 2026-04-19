@@ -59,6 +59,20 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           })}
         </nav>
 
+        {/* External Tools */}
+        <div className="px-4 py-2 border-t border-outline-variant/20">
+          <p className="text-[10px] font-label uppercase tracking-widest text-outline px-2 mb-2">Tools</p>
+          <a
+            href="/dash"
+            target="_blank"
+            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/50 border-l-2 border-transparent transition-colors duration-200"
+          >
+            <Icon name="radar" />
+            <span>Day Trade Dash</span>
+            <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">Pro</span>
+          </a>
+        </div>
+
         <div className="p-4 border-t border-outline-variant/20">
           <div className="flex items-center gap-3 px-2">
             <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center">
