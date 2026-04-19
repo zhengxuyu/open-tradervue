@@ -210,3 +210,5 @@ tradervue.dbstitch-prompt.md
 
 # dayTradeDash build output
 dash/dist/
+.playwright-mcp/
+.claude/skills/
