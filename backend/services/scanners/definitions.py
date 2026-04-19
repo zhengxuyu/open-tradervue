@@ -10,7 +10,27 @@ To add a new scanner:
 import yfinance as yf
 
 from .base import BaseScanner, BaseAlertScanner
-from ..market_data_source import us_equity
+from ..market_data_source import MarketDataSource, us_equity
+from ...schemas import ScannerResultItem
+
+
+async def _enrich_with_news(items: list[ScannerResultItem], data_source: MarketDataSource) -> list[ScannerResultItem]:
+    """Check news for items: breaking (< 2h) = red, recent (< 24h) = yellow."""
+    if not items:
+        return items
+    symbols = [item.symbol for item in items]
+    # Check last 24 hours
+    news_map = await data_source.check_news(symbols, hours=24)
+    # Check last 2 hours for "breaking"
+    breaking_map = await data_source.check_news(symbols, hours=2)
+    for item in items:
+        if breaking_map.get(item.symbol):
+            item.has_news = True
+            item.news_type = "breaking"
+        elif news_map.get(item.symbol):
+            item.has_news = True
+            item.news_type = "recent"
+    return items
 
 
 # ── Momentum ─────────────────────────────────────────────────────────────────
@@ -132,7 +152,7 @@ class TopRelativeVolume(BaseScanner):
 class Ross5Pillars(BaseScanner):
     id = "ross_5_pillars"
     name = "Ross's 5 Pillars"
-    description = "Float < 20M, RelVol(5min) >= 5x, Gap >= 30%, Price $2-$20"
+    description = "Float < 20M, RelVol(5min) >= 5x, Gap >= 30%, Price $2-$20, News"
 
     def build_query(self):
         return us_equity(
@@ -145,6 +165,10 @@ class Ross5Pillars(BaseScanner):
     def post_filter(self, items):
         # Pillar 2: Relative Volume (5min) >= 5x
         return [item for item in items if item.relative_volume_5min and item.relative_volume_5min >= 5]
+
+    async def enrich(self, items, data_source):
+        # Pillar 5: News/Catalyst
+        return await _enrich_with_news(items, data_source)
 
 
 class Ross5PillarsAlert(BaseAlertScanner):
@@ -163,6 +187,9 @@ class Ross5PillarsAlert(BaseAlertScanner):
 
     def post_filter(self, items):
         return [item for item in items if item.relative_volume_5min and item.relative_volume_5min >= 5]
+
+    async def enrich(self, items, data_source):
+        return await _enrich_with_news(items, data_source)
 
 
 # ── Small Cap ────────────────────────────────────────────────────────────────

@@ -41,6 +41,10 @@ class BaseScanner(ABC):
     def post_filter(self, items: list[ScannerResultItem]) -> list[ScannerResultItem]:
         return items
 
+    async def enrich(self, items: list[ScannerResultItem], data_source: MarketDataSource) -> list[ScannerResultItem]:
+        """Optional async enrichment (e.g., news check). Override in subclass."""
+        return items
+
     async def scan(self, data_source: MarketDataSource) -> ScannerResponse:
         start = time.time()
 
@@ -53,6 +57,7 @@ class BaseScanner(ABC):
         )
 
         items = self.post_filter(items)
+        items = await self.enrich(items, data_source)
 
         reverse = self.sort_dir == "desc"
         items.sort(key=lambda x: getattr(x, self.sort_by, None) or 0, reverse=reverse)
@@ -130,6 +135,7 @@ class BaseAlertScanner(BaseScanner):
         )
 
         items = self.post_filter(items)
+        items = await self.enrich(items, data_source)
 
         new_count = 0
         if not self._baseline_set:

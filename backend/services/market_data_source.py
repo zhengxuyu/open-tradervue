@@ -195,3 +195,43 @@ class MarketDataSource:
         self._cache[cache_key] = (results, datetime.now())
         logger.info("Cache refreshed for '%s': %d results", cache_key, len(results))
         return results
+
+    def _check_news_sync(self, symbols: list[str], hours: int = 24) -> dict[str, bool]:
+        """Check if symbols have recent news. Returns {symbol: has_news}."""
+        result: dict[str, bool] = {}
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+        for sym in symbols:
+            try:
+                ticker = yf.Ticker(sym)
+                news = ticker.news or []
+                has_recent = False
+                for item in news[:5]:
+                    content = item.get("content", {})
+                    pub_date = content.get("pubDate", "")
+                    if pub_date:
+                        pub_dt = datetime.fromisoformat(pub_date.replace("Z", "+00:00"))
+                        if pub_dt > cutoff:
+                            has_recent = True
+                            break
+                result[sym] = has_recent
+            except Exception:
+                result[sym] = False
+        return result
+
+    async def check_news(self, symbols: list[str], hours: int = 24) -> dict[str, bool]:
+        """Async wrapper for news check."""
+        if not symbols:
+            return {}
+        # Cache news checks for 5 minutes
+        cache_key = f"news_{'_'.join(sorted(symbols[:10]))}"
+        if self._is_cache_valid(cache_key):
+            cached_data = self._cache[cache_key][0]
+            if isinstance(cached_data, dict):
+                return cached_data
+
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, self._check_news_sync, symbols, hours)
+
+        # Store in cache (reuse same cache dict, value is dict not list)
+        self._cache[cache_key] = (result, datetime.now())  # type: ignore
+        return result
