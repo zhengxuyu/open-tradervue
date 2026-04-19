@@ -63,8 +63,9 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         <div className="px-4 py-2 border-t border-outline-variant/20">
           <p className="text-[10px] font-label uppercase tracking-widest text-outline px-2 mb-2">Tools</p>
           <a
-            href="/dash"
+            href="https://open-tradervue-production.up.railway.app/dash/"
             target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/50 border-l-2 border-transparent transition-colors duration-200"
           >
             <Icon name="radar" />
