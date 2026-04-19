@@ -20,6 +20,9 @@ async def get_subscription_status(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    # DEV: bypass subscription check locally
+    if os.getenv("DEV_BYPASS_SUBSCRIPTION", "").lower() == "true":
+        return {"subscribed": True, "status": "active"}
     result = await db.execute(
         select(Subscription).where(Subscription.user_id == current_user.id)
     )

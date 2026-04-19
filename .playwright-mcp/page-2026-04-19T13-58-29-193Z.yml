@@ -1,0 +1,23 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - heading "Day Trade Dash" [level=1] [ref=e6]
+    - button "chevron_left" [ref=e7]:
+      - generic [ref=e8]: chevron_left
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - paragraph [ref=e11]: Add Widget
+      - button "radar Add Scanner expand_more" [ref=e13]:
+        - generic [ref=e14]: radar
+        - generic [ref=e15]: Add Scanner
+        - generic [ref=e16]: expand_more
+      - button "show_chart Add Chart" [ref=e17]:
+        - generic [ref=e18]: show_chart
+        - generic [ref=e19]: Add Chart
+    - generic [ref=e20]:
+      - paragraph [ref=e21]: Layouts
+      - button "Default(built-in)" [ref=e23]
+      - button "Multi-Scanner(built-in)" [ref=e25]
+      - button "Full Analysis(built-in)" [ref=e27]
+      - button "save Save Current Layout" [ref=e28]:
+        - generic [ref=e29]: save
+        - generic [ref=e30]: Save Current Layout

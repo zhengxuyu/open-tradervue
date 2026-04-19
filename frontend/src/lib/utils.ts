@@ -61,3 +61,27 @@ export function formatPnL(value: number): string {
   const prefix = value >= 0 ? '+' : ''
   return `${prefix}${formatCurrency(value)}`
 }
+
+export function formatVolume(value: number | null | undefined): string {
+  if (value == null) return '—'
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
+  return value.toString()
+}
+
+export function formatMarketCap(value: number | null | undefined): string {
+  if (value == null) return '—'
+  if (value >= 1_000_000_000_000) return `$${(value / 1_000_000_000_000).toFixed(1)}T`
+  if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(0)}M`
+  return `$${value.toLocaleString()}`
+}
+
+export function formatCompactNumber(value: number | null | undefined): string {
+  if (value == null) return '—'
+  if (Math.abs(value) >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`
+  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`
+  if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(1)}K`
+  return value.toFixed(2)
+}
