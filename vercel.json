@@ -1,7 +1,7 @@
 {
-  "rewrites": [
-    { "source": "/dash", "destination": "https://open-tradervue-production.up.railway.app/dash/" },
-    { "source": "/dash/(.*)", "destination": "https://open-tradervue-production.up.railway.app/dash/$1" },
-    { "source": "/api/(.*)", "destination": "https://open-tradervue-production.up.railway.app/api/$1" }
+  "routes": [
+    { "src": "/dash$", "dest": "https://open-tradervue-production.up.railway.app/dash/" },
+    { "src": "/dash/(.*)", "dest": "https://open-tradervue-production.up.railway.app/dash/$1" },
+    { "src": "/api/(.*)", "dest": "https://open-tradervue-production.up.railway.app/api/$1" }
   ]
 }
