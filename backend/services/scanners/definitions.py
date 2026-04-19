@@ -94,6 +94,25 @@ class MostActive(BaseScanner):
         )
 
 
+class TopVolume5Min(BaseScanner):
+    id = "top_volume_5min"
+    name = "Top Volume 5 Minutes"
+    description = "Stocks with highest relative volume in the last 5 minutes"
+    sort_field = "dayvolume"
+    sort_by = "relative_volume_5min"
+    sort_dir = "desc"
+
+    def build_query(self):
+        return us_equity(
+            yf.EquityQuery("gt", ["dayvolume", 500_000]),
+            yf.EquityQuery("gt", ["percentchange", 1]),
+        )
+
+    def post_filter(self, items):
+        # Only show stocks with meaningful 5-min relative volume
+        return [item for item in items if item.relative_volume_5min and item.relative_volume_5min >= 2]
+
+
 class TopRelativeVolume(BaseScanner):
     id = "top_relative_volume"
     name = "Top Relative Volume"
