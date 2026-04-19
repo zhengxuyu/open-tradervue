@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/dash", "destination": "https://open-tradervue-production.up.railway.app/dash/" },
+    { "source": "/dash/(.*)", "destination": "https://open-tradervue-production.up.railway.app/dash/$1" },
+    { "source": "/api/(.*)", "destination": "https://open-tradervue-production.up.railway.app/api/$1" }
+  ]
+}
