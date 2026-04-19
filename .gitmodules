@@ -1,0 +1,3 @@
+[submodule "dash-src"]
+	path = dash-src
+	url = git@github.com:zhengxuyu/dayTradeDash.git
