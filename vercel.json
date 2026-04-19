@@ -1,7 +1,6 @@
 {
-  "routes": [
-    { "src": "/dash$", "dest": "https://open-tradervue-production.up.railway.app/dash/" },
-    { "src": "/dash/(.*)", "dest": "https://open-tradervue-production.up.railway.app/dash/$1" },
-    { "src": "/api/(.*)", "dest": "https://open-tradervue-production.up.railway.app/api/$1" }
+  "rewrites": [
+    { "source": "/dash", "destination": "https://open-tradervue-production.up.railway.app/dash/" },
+    { "source": "/dash/:path*", "destination": "https://open-tradervue-production.up.railway.app/dash/:path*" }
   ]
 }
