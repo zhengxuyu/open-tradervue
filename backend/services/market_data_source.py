@@ -150,6 +150,7 @@ class MarketDataSource:
     def __init__(self, cache_ttl_seconds: int = 10):
         self._cache: dict[str, tuple[list[ScannerResultItem], datetime]] = {}
         self._cache_ttl = timedelta(seconds=cache_ttl_seconds)
+        self._news_cache: dict[str, tuple[dict[str, bool], datetime]] = {}
 
     def _is_cache_valid(self, key: str) -> bool:
         if key not in self._cache:
@@ -219,19 +220,17 @@ class MarketDataSource:
         return result
 
     async def check_news(self, symbols: list[str], hours: int = 24) -> dict[str, bool]:
-        """Async wrapper for news check."""
+        """Async wrapper for news check. Cached for 5 minutes."""
         if not symbols:
             return {}
-        # Cache news checks for 5 minutes
-        cache_key = f"news_{'_'.join(sorted(symbols[:10]))}"
-        if self._is_cache_valid(cache_key):
-            cached_data = self._cache[cache_key][0]
-            if isinstance(cached_data, dict):
-                return cached_data
+        cache_key = f"news_{hours}h_{'_'.join(sorted(symbols[:10]))}"
+        if cache_key in self._news_cache:
+            result, cached_at = self._news_cache[cache_key]
+            if datetime.now() < cached_at + timedelta(minutes=5):
+                return result
 
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, self._check_news_sync, symbols, hours)
 
-        # Store in cache (reuse same cache dict, value is dict not list)
-        self._cache[cache_key] = (result, datetime.now())  # type: ignore
+        self._news_cache[cache_key] = (result, datetime.now())
         return result

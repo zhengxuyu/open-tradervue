@@ -166,10 +166,6 @@ class Ross5Pillars(BaseScanner):
         # Pillar 2: Relative Volume (5min) >= 5x
         return [item for item in items if item.relative_volume_5min and item.relative_volume_5min >= 5]
 
-    async def enrich(self, items, data_source):
-        # Pillar 5: News/Catalyst
-        return await _enrich_with_news(items, data_source)
-
 
 class Ross5PillarsAlert(BaseAlertScanner):
     id = "ross_5_pillars_alert"
@@ -187,9 +183,6 @@ class Ross5PillarsAlert(BaseAlertScanner):
 
     def post_filter(self, items):
         return [item for item in items if item.relative_volume_5min and item.relative_volume_5min >= 5]
-
-    async def enrich(self, items, data_source):
-        return await _enrich_with_news(items, data_source)
 
 
 # ── Small Cap ────────────────────────────────────────────────────────────────

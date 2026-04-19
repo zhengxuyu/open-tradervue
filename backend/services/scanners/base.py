@@ -42,7 +42,19 @@ class BaseScanner(ABC):
         return items
 
     async def enrich(self, items: list[ScannerResultItem], data_source: MarketDataSource) -> list[ScannerResultItem]:
-        """Optional async enrichment (e.g., news check). Override in subclass."""
+        """Check news for all results. Breaking (< 2h) = red, recent (< 24h) = yellow."""
+        if not items:
+            return items
+        symbols = [item.symbol for item in items[:50]]  # limit to top 50 to avoid slow API
+        news_24h = await data_source.check_news(symbols, hours=24)
+        news_2h = await data_source.check_news(symbols, hours=2)
+        for item in items:
+            if news_2h.get(item.symbol):
+                item.has_news = True
+                item.news_type = "breaking"
+            elif news_24h.get(item.symbol):
+                item.has_news = True
+                item.news_type = "recent"
         return items
 
     async def scan(self, data_source: MarketDataSource) -> ScannerResponse:
