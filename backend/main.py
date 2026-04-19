@@ -106,10 +106,16 @@ import os as _os
 from pathlib import Path as _Path
 
 # Serve Day Trade Dash frontend at /dash
+from fastapi.responses import RedirectResponse
+
+@app.get("/dash")
+async def dash_redirect():
+    return RedirectResponse(url="/dash/")
+
 _dash_dist = _Path(__file__).parent.parent / "dash" / "dist"
 if _dash_dist.is_dir():
     from fastapi.staticfiles import StaticFiles as _DashStaticFiles
-    app.mount("/dash", _DashStaticFiles(directory=str(_dash_dist), html=True), name="dash")
+    app.mount("/dash/", _DashStaticFiles(directory=str(_dash_dist), html=True), name="dash")
 
 _frontend_dist = _Path(__file__).parent.parent / "frontend" / "dist"
 if _frontend_dist.is_dir():
