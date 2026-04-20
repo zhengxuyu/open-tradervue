@@ -163,8 +163,11 @@ class Ross5Pillars(BaseScanner):
         )
 
     def post_filter(self, items):
-        # Pillar 2: Relative Volume (5min) >= 5x
-        return [item for item in items if item.relative_volume_5min and item.relative_volume_5min >= 5]
+        return [
+            item for item in items
+            if item.relative_volume_5min and item.relative_volume_5min >= 5  # Pillar 2: RelVol(5min) >= 5x
+            and item.pos_in_range_pct is not None and item.pos_in_range_pct >= 80  # Near HOD
+        ]
 
 
 class Ross5PillarsAlert(BaseAlertScanner):
@@ -335,6 +338,30 @@ class PennyLosers(BaseScanner):
             yf.EquityQuery("lt", ["percentchange", -10]),
             yf.EquityQuery("gt", ["dayvolume", 500_000]),
         )
+
+
+# ── After Hours ──────────────────────────────────────────────────────────────
+
+class AfterHoursTopGainers(BaseScanner):
+    id = "after_hours"
+    name = "After Hours Top Gainers"
+    description = "Stocks with biggest after-hours moves"
+    sort_by = "change_from_regular_close_pct"
+    sort_dir = "desc"
+
+    def build_query(self):
+        # Wide net: any US stock with decent volume today
+        return us_equity(
+            yf.EquityQuery("gt", ["dayvolume", 100_000]),
+        )
+
+    def post_filter(self, items):
+        # Only keep stocks with positive post-market change >= 3%
+        return [
+            item for item in items
+            if item.change_from_regular_close_pct is not None
+            and item.change_from_regular_close_pct >= 3
+        ]
 
 
 # ── Special ──────────────────────────────────────────────────────────────────
