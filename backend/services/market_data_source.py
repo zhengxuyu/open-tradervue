@@ -88,15 +88,17 @@ def quote_to_item(q: dict) -> Optional[ScannerResultItem]:
         return None
 
     market_state = q.get("marketState", "")
+
+    # Price: use pre/post market price when available
     if market_state == "PRE" and q.get("preMarketPrice"):
         price = q.get("preMarketPrice")
-        change_pct = q.get("preMarketChangePercent")
     elif market_state == "POST" and q.get("postMarketPrice"):
         price = q.get("postMarketPrice")
-        change_pct = q.get("postMarketChangePercent")
     else:
         price = q.get("regularMarketPrice")
-        change_pct = q.get("regularMarketChangePercent")
+
+    # Change %: always use regular market change (intraday), matching Warrior Trading
+    change_pct = q.get("regularMarketChangePercent")
 
     if price is None:
         return None
