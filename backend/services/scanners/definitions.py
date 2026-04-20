@@ -152,12 +152,15 @@ class TopRelativeVolume(BaseScanner):
 class Ross5Pillars(BaseScanner):
     id = "ross_5_pillars"
     name = "Ross's 5 Pillars"
-    description = "Float < 20M, RelVol(5min) >= 5x, Gap >= 30%, Price $2-$20, News"
+    description = "Float < 20M, RelVol(5min) >= 5x, Change >= 4%, Price $2-$20"
+    count = 200  # wide net, filter in post_filter
 
     def build_query(self):
+        # Use low percentchange threshold in query because Yahoo's value
+        # includes post-market moves. Real filtering happens in post_filter.
         return us_equity(
             yf.EquityQuery("btwn", ["intradayprice", 2, 20]),             # Pillar 4: Price $2-$20
-            yf.EquityQuery("gt", ["percentchange", 30]),                   # Pillar 3: Gap >= 30%
+            yf.EquityQuery("gt", ["percentchange", 4]),                    # Low threshold, real filter below
             yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),  # Pillar 1: Float < 20M
             yf.EquityQuery("gt", ["dayvolume", 500_000]),
         )
@@ -165,8 +168,8 @@ class Ross5Pillars(BaseScanner):
     def post_filter(self, items):
         return [
             item for item in items
-            if item.relative_volume_5min and item.relative_volume_5min >= 5  # Pillar 2: RelVol(5min) >= 5x
-            and item.pos_in_range_pct is not None and item.pos_in_range_pct >= 80  # Near HOD
+            if item.relative_volume_daily and item.relative_volume_daily >= 5  # Pillar 2: RelVol >= 5x
+            and item.change_from_close_pct is not None and item.change_from_close_pct >= 4  # Pillar 3: Change >= 4%
         ]
 
 
@@ -175,17 +178,22 @@ class Ross5PillarsAlert(BaseAlertScanner):
     name = "Ross's 5 Pillars Alert"
     description = "Alert when a stock newly meets all 5 Pillars criteria"
     strategy_name = "5 Pillar HOD alert"
+    count = 200
 
     def build_query(self):
         return us_equity(
             yf.EquityQuery("btwn", ["intradayprice", 2, 20]),
-            yf.EquityQuery("gt", ["percentchange", 30]),
+            yf.EquityQuery("gt", ["percentchange", 4]),
             yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
             yf.EquityQuery("gt", ["dayvolume", 500_000]),
         )
 
     def post_filter(self, items):
-        return [item for item in items if item.relative_volume_5min and item.relative_volume_5min >= 5]
+        return [
+            item for item in items
+            if item.relative_volume_daily and item.relative_volume_daily >= 5
+            and item.change_from_close_pct is not None and item.change_from_close_pct >= 4
+        ]
 
 
 # ── Small Cap HOD Momentum (Multi-Strategy Alert) ───────────────────────────
@@ -199,16 +207,18 @@ class SmallCapHODMomentum(MultiStrategyAlertScanner):
         no_filter = lambda items: items
 
         return [
-            # 5 Pillar HOD alert: float < 20M, rvol(5min) >= 5x, gap >= 30%, price $2-$20
+            # 5 Pillar HOD alert: float < 20M, rvol >= 5x, change >= 4%, price $2-$20
             (
                 "5 Pillar HOD alert",
                 us_equity(
                     yf.EquityQuery("btwn", ["intradayprice", 2, 20]),
-                    yf.EquityQuery("gt", ["percentchange", 30]),
+                    yf.EquityQuery("gt", ["percentchange", 4]),
                     yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
                     yf.EquityQuery("gt", ["dayvolume", 500_000]),
                 ),
-                lambda items: [i for i in items if i.relative_volume_5min and i.relative_volume_5min >= 5],
+                lambda items: [i for i in items
+                    if i.relative_volume_daily and i.relative_volume_daily >= 5
+                    and i.change_from_close_pct is not None and i.change_from_close_pct >= 4],
             ),
             # Squeeze Alert - Up 5% in 5min: high 5min relative volume
             (
