@@ -348,19 +348,20 @@ class AfterHoursTopGainers(BaseScanner):
     description = "Stocks with biggest after-hours moves"
     sort_by = "change_from_regular_close_pct"
     sort_dir = "desc"
+    count = 200  # wide net to catch AH movers
 
     def build_query(self):
-        # Wide net: any US stock with decent volume today
+        # Cast widest net: any US stock with some volume, sorted by change
         return us_equity(
-            yf.EquityQuery("gt", ["dayvolume", 100_000]),
+            yf.EquityQuery("gt", ["dayvolume", 50_000]),
         )
 
     def post_filter(self, items):
-        # Only keep stocks with positive post-market change >= 3%
+        # Only keep stocks with positive post-market change >= 2%
         return [
             item for item in items
             if item.change_from_regular_close_pct is not None
-            and item.change_from_regular_close_pct >= 3
+            and item.change_from_regular_close_pct >= 2
         ]
 
 
