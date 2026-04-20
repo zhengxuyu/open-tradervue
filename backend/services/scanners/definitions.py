@@ -9,7 +9,7 @@ To add a new scanner:
 
 import yfinance as yf
 
-from .base import BaseScanner, BaseAlertScanner
+from .base import BaseScanner, BaseAlertScanner, MultiStrategyAlertScanner
 from ..market_data_source import MarketDataSource, us_equity
 from ...schemas import ScannerResultItem
 
@@ -185,20 +185,59 @@ class Ross5PillarsAlert(BaseAlertScanner):
         return [item for item in items if item.relative_volume_5min and item.relative_volume_5min >= 5]
 
 
-# ── Small Cap ────────────────────────────────────────────────────────────────
+# ── Small Cap HOD Momentum (Multi-Strategy Alert) ───────────────────────────
 
-class SmallCapHODMomentum(BaseScanner):
+class SmallCapHODMomentum(MultiStrategyAlertScanner):
     id = "hod_momentum"
     name = "Small Cap - HOD Momentum"
-    description = "Small cap stocks ($1-$20) with strong momentum"
+    description = "Multi-strategy alert: 5 Pillar HOD, Squeeze 5min, 52wk Breakout, Low Float Hunter"
 
-    def build_query(self):
-        return us_equity(
-            yf.EquityQuery("btwn", ["intradayprice", 1, 20]),
-            yf.EquityQuery("gt", ["percentchange", 5]),
-            yf.EquityQuery("gt", ["dayvolume", 200_000]),
-            yf.EquityQuery("lt", ["intradaymarketcap", 2_000_000_000]),
-        )
+    def get_strategies(self):
+        no_filter = lambda items: items
+
+        return [
+            # 5 Pillar HOD alert: float < 20M, rvol(5min) >= 5x, gap >= 30%, price $2-$20
+            (
+                "5 Pillar HOD alert",
+                us_equity(
+                    yf.EquityQuery("btwn", ["intradayprice", 2, 20]),
+                    yf.EquityQuery("gt", ["percentchange", 30]),
+                    yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
+                    yf.EquityQuery("gt", ["dayvolume", 500_000]),
+                ),
+                lambda items: [i for i in items if i.relative_volume_5min and i.relative_volume_5min >= 5],
+            ),
+            # Squeeze Alert - Up 5% in 5min: high 5min relative volume
+            (
+                "Squeeze Alert - Up 5% in 5min",
+                us_equity(
+                    yf.EquityQuery("gt", ["percentchange", 5]),
+                    yf.EquityQuery("gt", ["dayvolume", 100_000]),
+                    yf.EquityQuery("lt", ["intradaymarketcap", 2_000_000_000]),
+                ),
+                lambda items: [i for i in items if i.relative_volume_5min and i.relative_volume_5min >= 10],
+            ),
+            # Squeeze Alert - 52wk Breakout: near 52-week high with volume
+            (
+                "Squeeze Alert - 52wk Breakout",
+                us_equity(
+                    yf.EquityQuery("gt", ["percentchange", 10]),
+                    yf.EquityQuery("gt", ["dayvolume", 500_000]),
+                    yf.EquityQuery("gt", ["fiftytwowkpercentchange", 50]),
+                ),
+                no_filter,
+            ),
+            # Low Float Volatility Hunter: very low float + big move
+            (
+                "Low Float Volatility Hunter",
+                us_equity(
+                    yf.EquityQuery("lt", ["totalsharesoutstanding", 5_000_000]),
+                    yf.EquityQuery("gt", ["percentchange", 10]),
+                    yf.EquityQuery("gt", ["dayvolume", 50_000]),
+                ),
+                no_filter,
+            ),
+        ]
 
 
 class SmallCapGainers(BaseScanner):

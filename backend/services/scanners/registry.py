@@ -10,7 +10,7 @@ def _all_subclasses(cls):
     """Recursively find all subclasses."""
     result = []
     for sub in cls.__subclasses__():
-        if hasattr(sub, 'id') and not sub.__name__.startswith('Base'):
+        if hasattr(sub, 'id') and not sub.__name__.startswith('Base') and not sub.__name__.startswith('Multi') and sub.__name__ != 'MultiStrategyAlertScanner':
             result.append(sub)
         result.extend(_all_subclasses(sub))
     return result
