@@ -1,6 +1,4 @@
-import { useEffect, useRef, useState, memo, useCallback } from 'react'
-// TradingView's built-in toolbar handles interval/symbol changes natively
-import { getChartColors } from '@/lib/chartColors'
+import { useRef, useState, memo, useCallback } from 'react'
 
 interface TradingViewWidgetProps {
   symbol: string
@@ -8,13 +6,7 @@ interface TradingViewWidgetProps {
   theme?: 'light' | 'dark'
   minHeight?: number
   defaultHeight?: number
-  focusTime?: string  // ISO datetime string — chart scrolls to this time on load
-}
-
-declare global {
-  interface Window {
-    TradingView: any
-  }
+  focusTime?: string  // ISO datetime string — not used by TradingView iframe
 }
 
 function TradingViewWidgetComponent({
@@ -23,142 +15,32 @@ function TradingViewWidgetComponent({
   theme = 'dark',
   minHeight = 400,
   defaultHeight = 600,
-  focusTime,
 }: TradingViewWidgetProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const widgetRef = useRef<any>(null)
   const resizeRef = useRef<HTMLDivElement>(null)
-  const [currentSymbol, setCurrentSymbol] = useState(symbol)
   const [height, setHeight] = useState(defaultHeight)
   const [isResizing, setIsResizing] = useState(false)
 
-  // Update symbol when prop changes
-  useEffect(() => {
-    if (symbol !== currentSymbol) {
-      setCurrentSymbol(symbol)
-    }
-  }, [symbol])
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+  const tvTheme = isDark ? 'dark' : 'light'
 
-  useEffect(() => {
-    // Load TradingView script if not already loaded
-    const scriptId = 'tradingview-widget-script'
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null
+  // Build TradingView Advanced Chart iframe URL
+  const src = `https://s.tradingview.com/widgetembed/?` +
+    `symbol=${encodeURIComponent(symbol)}` +
+    `&interval=${defaultInterval}` +
+    `&timezone=America%2FNew_York` +
+    `&theme=${tvTheme}` +
+    `&style=1` +
+    `&locale=zh_CN` +
+    `&enable_publishing=0` +
+    `&allow_symbol_change=1` +
+    `&save_image=1` +
+    `&hide_side_toolbar=0` +
+    `&hide_top_toolbar=0` +
+    `&withdateranges=1` +
+    `&studies=MASimple%40tv-basicstudies%21Volume%40tv-basicstudies` +
+    `&utm_source=tradejournal.dev`
 
-    const initWidget = () => {
-      if (!containerRef.current || !window.TradingView) return
-
-      const colors = getChartColors()
-      const isDark = document.documentElement.classList.contains('dark')
-
-      // Clear previous widget
-      containerRef.current.innerHTML = ''
-
-      // Create unique container id
-      const containerId = `tv_chart_${Date.now()}`
-      const chartDiv = document.createElement('div')
-      chartDiv.id = containerId
-      chartDiv.style.height = '100%'
-      containerRef.current.appendChild(chartDiv)
-
-      // Calculate focus range if focusTime is provided
-      let focusFrom: number | null = null
-      let focusTo: number | null = null
-      if (focusTime) {
-        const focusSec = Math.floor(new Date(focusTime).getTime() / 1000)
-        // Show ~2 hours around the focus time
-        focusFrom = focusSec - 3600
-        focusTo = focusSec + 3600
-      }
-
-      // Create widget
-      widgetRef.current = new window.TradingView.widget({
-        symbol: currentSymbol,
-        interval: defaultInterval,
-        timezone: 'America/New_York',
-        theme: isDark ? 'dark' : 'light',
-        style: '1', // Candlestick
-        locale: 'zh_CN',
-        toolbar_bg: colors.surface,
-        enable_publishing: false,
-        allow_symbol_change: true,
-        save_image: true,
-        container_id: containerId,
-        autosize: false,
-        height: height,
-        width: '100%',
-        hide_side_toolbar: false,
-        hide_top_toolbar: false,
-        studies: [
-          'MASimple@tv-basicstudies',
-          'Volume@tv-basicstudies',
-        ],
-        disabled_features: [
-          'header_compare',
-          'compare_symbol',
-        ],
-        enabled_features: [
-          'study_templates',
-          'use_localstorage_for_settings',
-          'save_chart_properties_to_local_storage',
-        ],
-        overrides: {
-          'paneProperties.background': colors.surface,
-          'paneProperties.backgroundType': 'solid',
-          'paneProperties.vertGridProperties.color': colors.grid,
-          'paneProperties.horzGridProperties.color': colors.grid,
-          'mainSeriesProperties.candleStyle.upColor': colors.profitContainer,
-          'mainSeriesProperties.candleStyle.downColor': colors.lossContainer,
-          'mainSeriesProperties.candleStyle.borderUpColor': colors.profitContainer,
-          'mainSeriesProperties.candleStyle.borderDownColor': colors.lossContainer,
-          'mainSeriesProperties.candleStyle.wickUpColor': colors.profitContainer,
-          'mainSeriesProperties.candleStyle.wickDownColor': colors.lossContainer,
-          'scalesProperties.textColor': colors.textMuted,
-          'scalesProperties.lineColor': colors.grid,
-        },
-        loading_screen: {
-          backgroundColor: colors.surface,
-          foregroundColor: colors.primary,
-        },
-      })
-
-      // Scroll to focus time after chart is ready
-      if (focusFrom !== null && focusTo !== null && widgetRef.current.onChartReady) {
-        const from = focusFrom
-        const to = focusTo
-        widgetRef.current.onChartReady(() => {
-          try {
-            widgetRef.current.chart().setVisibleRange({
-              from,
-              to,
-            })
-          } catch (e) {
-            console.warn('Failed to set visible range:', e)
-          }
-        })
-      }
-    }
-
-    if (!script) {
-      script = document.createElement('script')
-      script.id = scriptId
-      script.src = 'https://s3.tradingview.com/tv.js'
-      script.async = true
-      script.onload = initWidget
-      document.head.appendChild(script)
-    } else if (window.TradingView) {
-      initWidget()
-    } else {
-      script.addEventListener('load', initWidget)
-    }
-
-    return () => {
-      if (widgetRef.current) {
-        widgetRef.current = null
-      }
-    }
-  }, [currentSymbol, defaultInterval, theme, height])
-
-  // Resize handlers - vertical only
+  // Resize handlers
   const handleVerticalResize = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     setIsResizing(true)
@@ -184,13 +66,13 @@ function TradingViewWidgetComponent({
 
   return (
     <div className="rounded-xl overflow-hidden border border-outline-variant/10 bg-surface">
-      {/* Chart Container — TradingView's built-in toolbar handles interval selection */}
-      <div
-        ref={containerRef}
-        style={{ height: `${height}px` }}
+      <iframe
+        src={src}
+        style={{ width: '100%', height: `${height}px`, border: 'none' }}
+        allowFullScreen
       />
 
-      {/* Resize Handle - Bottom */}
+      {/* Resize Handle */}
       <div className="relative">
         <div
           ref={resizeRef}
