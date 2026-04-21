@@ -144,11 +144,15 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
     seriesRef.current = candlestickSeries
 
+    // Parse timestamps as UTC so the chart displays ET times correctly
+    // (backend sends naive ET strings like "2026-04-17T14:55:00")
+    const parseAsUTC = (ts: string) => Math.floor(new Date(ts + 'Z').getTime() / 1000)
+
     // Prepare and set chart data
     const chartData: CandlestickData<Time>[] = klines.map(k => {
       const timeValue = interval === 'daily'
         ? k.timestamp.split('T')[0]
-        : Math.floor(new Date(k.timestamp).getTime() / 1000)
+        : parseAsUTC(k.timestamp)
 
       return {
         time: timeValue as Time,
@@ -180,7 +184,7 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
     const volumeData = klines.map(k => {
       const timeValue = interval === 'daily'
         ? k.timestamp.split('T')[0]
-        : Math.floor(new Date(k.timestamp).getTime() / 1000)
+        : parseAsUTC(k.timestamp)
 
       return {
         time: timeValue as Time,
@@ -194,13 +198,13 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
     // Add markers for trades — snap each trade to the nearest kline time
     if (trades.length > 0) {
       // Build a sorted list of kline timestamps for snapping
-      const klineTimes = chartData.map(d => typeof d.time === 'number' ? d.time : new Date(d.time as string).getTime() / 1000)
+      const klineTimes = chartData.map(d => typeof d.time === 'number' ? d.time : parseAsUTC(d.time as string))
 
       const snapToKline = (tradeTime: string): Time => {
         if (interval === 'daily') {
           return tradeTime.split('T')[0] as Time
         }
-        const tradeSec = Math.floor(new Date(tradeTime).getTime() / 1000)
+        const tradeSec = parseAsUTC(tradeTime)
         // Find the closest kline timestamp
         let closest = klineTimes[0]
         let minDiff = Math.abs(tradeSec - closest)
@@ -225,8 +229,8 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
       }))
 
       markers.sort((a, b) => {
-        const aTime = typeof a.time === 'number' ? a.time : new Date(a.time as string).getTime()
-        const bTime = typeof b.time === 'number' ? b.time : new Date(b.time as string).getTime()
+        const aTime = typeof a.time === 'number' ? a.time : parseAsUTC(a.time as string)
+        const bTime = typeof b.time === 'number' ? b.time : parseAsUTC(b.time as string)
         return aTime - bTime
       })
 
@@ -236,12 +240,12 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
     // Focus on first buy trade if exists
     const firstBuyTrade = trades.find(t => t.side === 'BUY')
     if (firstBuyTrade && chartData.length > 0) {
-      const buyTimestamp = Math.floor(new Date(firstBuyTrade.time).getTime() / 1000)
+      const buyTimestamp = parseAsUTC(firstBuyTrade.time)
 
       let buyIndex = -1
       let minDiff = Infinity
       chartData.forEach((d, idx) => {
-        const dataTime = typeof d.time === 'number' ? d.time : Math.floor(new Date(d.time as string).getTime() / 1000)
+        const dataTime = typeof d.time === 'number' ? d.time : parseAsUTC(d.time as string)
         const diff = Math.abs(dataTime - buyTimestamp)
         if (diff < minDiff) {
           minDiff = diff
