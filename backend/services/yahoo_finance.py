@@ -1,5 +1,7 @@
 import yfinance as yf
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+_ET = timezone(timedelta(hours=-4))  # US Eastern (EDT)
 from typing import Optional
 import asyncio
 from functools import partial
@@ -40,7 +42,7 @@ class YahooFinanceService:
             klines = []
             for timestamp, row in df.iterrows():
                 klines.append(KlineData(
-                    timestamp=timestamp.to_pydatetime().replace(tzinfo=None),
+                    timestamp=timestamp.to_pydatetime().astimezone(_ET).replace(tzinfo=None),
                     open=float(row['Open']),
                     high=float(row['High']),
                     low=float(row['Low']),
