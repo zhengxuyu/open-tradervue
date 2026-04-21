@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+_ET = timezone(timedelta(hours=-4))  # US Eastern (EDT)
 
 from ..database import get_db
 from ..auth import get_current_user, CurrentUser
@@ -76,7 +78,7 @@ async def get_trades_with_kline(
     trade_markers = [
         {
             "id": t.id,
-            "time": t.executed_at.isoformat(),
+            "time": t.executed_at.replace(tzinfo=timezone.utc).astimezone(_ET).replace(tzinfo=None).isoformat(),
             "side": t.side,
             "price": t.price,
             "quantity": t.quantity
