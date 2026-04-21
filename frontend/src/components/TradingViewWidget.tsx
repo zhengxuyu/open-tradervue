@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, memo, useCallback } from 'react'
+// TradingView's built-in toolbar handles interval/symbol changes natively
 import { getChartColors } from '@/lib/chartColors'
 
 interface TradingViewWidgetProps {
@@ -15,16 +16,6 @@ declare global {
   }
 }
 
-const INTERVALS = [
-  { value: '1', label: '1m' },
-  { value: '5', label: '5m' },
-  { value: '15', label: '15m' },
-  { value: '30', label: '30m' },
-  { value: '60', label: '1H' },
-  { value: 'D', label: 'D' },
-  { value: 'W', label: 'W' },
-]
-
 function TradingViewWidgetComponent({
   symbol,
   defaultInterval = '1',
@@ -35,7 +26,6 @@ function TradingViewWidgetComponent({
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<any>(null)
   const resizeRef = useRef<HTMLDivElement>(null)
-  const [interval, setInterval] = useState(defaultInterval)
   const [currentSymbol, setCurrentSymbol] = useState(symbol)
   const [height, setHeight] = useState(defaultHeight)
   const [isResizing, setIsResizing] = useState(false)
@@ -71,8 +61,8 @@ function TradingViewWidgetComponent({
       // Create widget
       widgetRef.current = new window.TradingView.widget({
         symbol: currentSymbol,
-        interval: interval,
-        timezone: 'Asia/Shanghai',
+        interval: defaultInterval,
+        timezone: 'America/New_York',
         theme: isDark ? 'dark' : 'light',
         style: '1', // Candlestick
         locale: 'zh_CN',
@@ -138,11 +128,7 @@ function TradingViewWidgetComponent({
         widgetRef.current = null
       }
     }
-  }, [currentSymbol, interval, theme, height])
-
-  const handleIntervalChange = (newInterval: string) => {
-    setInterval(newInterval)
-  }
+  }, [currentSymbol, defaultInterval, theme, height])
 
   // Resize handlers - vertical only
   const handleVerticalResize = useCallback((e: React.MouseEvent) => {
@@ -170,32 +156,7 @@ function TradingViewWidgetComponent({
 
   return (
     <div className="rounded-xl overflow-hidden border border-outline-variant/10 bg-surface">
-      {/* Custom Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-outline-variant/10 bg-surface-container">
-        <div className="flex items-center gap-3">
-          <span className="text-on-surface font-semibold text-sm">{currentSymbol}</span>
-          <span className="text-outline text-[10px] font-label uppercase tracking-wider">TradingView</span>
-        </div>
-
-        {/* Interval Selector */}
-        <div className="flex items-center gap-0.5 bg-surface-container-low rounded-lg p-1">
-          {INTERVALS.map((int) => (
-            <button
-              key={int.value}
-              onClick={() => handleIntervalChange(int.value)}
-              className={`px-3 py-1 text-[11px] font-medium rounded-md transition-colors ${
-                interval === int.value
-                  ? 'bg-primary text-on-primary'
-                  : 'text-outline hover:text-on-surface hover:bg-surface-container-high'
-              }`}
-            >
-              {int.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Chart Container */}
+      {/* Chart Container — TradingView's built-in toolbar handles interval selection */}
       <div
         ref={containerRef}
         style={{ height: `${height}px` }}
