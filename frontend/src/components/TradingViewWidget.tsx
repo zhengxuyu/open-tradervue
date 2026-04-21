@@ -12,7 +12,6 @@ interface TradingViewWidgetProps {
 function TradingViewWidgetComponent({
   symbol,
   defaultInterval = '1',
-  theme = 'dark',
   minHeight = 400,
   defaultHeight = 600,
 }: TradingViewWidgetProps) {
