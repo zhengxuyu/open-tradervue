@@ -24,6 +24,52 @@ class YahooFinanceService:
             return False
         return datetime.now() < self._cache_expiry[cache_key]
 
+    @staticmethod
+    def _fill_gaps(klines: list[KlineData], interval_minutes: int) -> list[KlineData]:
+        """Fill missing candles with flat bars (prev close as OHLC, volume=0).
+
+        Only fills gaps within the same trading session (4:00-20:00 ET).
+        Overnight gaps are left as-is.
+        """
+        if len(klines) < 2 or interval_minutes <= 0:
+            return klines
+
+        delta = timedelta(minutes=interval_minutes)
+        # Pre-market starts 4:00, after-hours ends 20:00
+        session_start_hour, session_end_hour = 4, 20
+
+        filled: list[KlineData] = [klines[0]]
+        for i in range(1, len(klines)):
+            prev = filled[-1]
+            curr = klines[i]
+
+            # Only fill within the same calendar day and within session hours
+            expected = prev.timestamp + delta
+            while expected < curr.timestamp:
+                # Stop filling if we'd cross into overnight gap
+                if expected.hour < session_start_hour or expected.hour >= session_end_hour:
+                    break
+                if expected.date() != prev.timestamp.date():
+                    break
+                filled.append(KlineData(
+                    timestamp=expected,
+                    open=prev.close,
+                    high=prev.close,
+                    low=prev.close,
+                    close=prev.close,
+                    volume=0,
+                ))
+                expected += delta
+
+            filled.append(curr)
+
+        return filled
+
+    # Map yfinance interval string to minutes for gap filling
+    _INTERVAL_MINUTES = {
+        "1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60,
+    }
+
     def _fetch_data_sync(
         self,
         symbol: str,
@@ -49,6 +95,11 @@ class YahooFinanceService:
                     close=float(row['Close']),
                     volume=int(row['Volume'])
                 ))
+
+            # Fill gaps for intraday intervals
+            gap_minutes = self._INTERVAL_MINUTES.get(interval, 0)
+            if gap_minutes:
+                klines = self._fill_gaps(klines, gap_minutes)
 
             return klines
         except Exception as e:
