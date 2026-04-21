@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { TopAppBar } from '@/components/TopAppBar'
 import { Icon } from '@/components/Icon'
 import { SideBadge, PnLValue } from '@/components/Badge'
-import { TradingChart } from '@/components/TradingChart'
+import { TradingViewWidget } from '@/components/TradingViewWidget'
 import { getPositionDetail, updateTrade, deleteTrade, type PositionDetail } from '@/services/api'
 import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
 
@@ -264,17 +264,10 @@ export function PositionDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Left: Chart */}
           <div className="lg:col-span-8">
-            <TradingChart
+            <TradingViewWidget
               symbol={position.symbol}
-              defaultInterval="1min"
+              defaultInterval="1"
               defaultHeight={500}
-              trades={position.trades.map(t => ({
-                id: t.id,
-                time: t.executed_at,
-                side: t.side,
-                price: t.price,
-                quantity: t.quantity
-              }))}
             />
           </div>
 
