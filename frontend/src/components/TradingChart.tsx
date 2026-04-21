@@ -191,31 +191,38 @@ export function TradingChart({ symbol, klines: initialKlines, trades = [], defau
 
     volumeSeries.setData(volumeData)
 
-    // Add markers for trades
+    // Add markers for trades — snap each trade to the nearest kline time
     if (trades.length > 0) {
-      const intervalSeconds: Record<string, number> = {
-        '1min': 60,
-        '5min': 300,
-        '15min': 900,
-        '30min': 1800,
-        '60min': 3600,
-      }
-      const step = intervalSeconds[interval] || 60
+      // Build a sorted list of kline timestamps for snapping
+      const klineTimes = chartData.map(d => typeof d.time === 'number' ? d.time : new Date(d.time as string).getTime() / 1000)
 
-      const markers: SeriesMarker<Time>[] = trades.map(trade => {
-        const timeValue = interval === 'daily'
-          ? trade.time.split('T')[0]
-          : Math.floor(new Date(trade.time).getTime() / 1000 / step) * step
-
-        return {
-          time: timeValue as Time,
-          position: trade.side === 'BUY' ? 'belowBar' as const : 'aboveBar' as const,
-          color: trade.side === 'BUY' ? colors.profitContainer : colors.lossContainer,
-          shape: trade.side === 'BUY' ? 'arrowUp' as const : 'arrowDown' as const,
-          text: `${trade.side} ${trade.quantity}@${trade.price.toFixed(2)}`,
-          size: 2,
+      const snapToKline = (tradeTime: string): Time => {
+        if (interval === 'daily') {
+          return tradeTime.split('T')[0] as Time
         }
-      })
+        const tradeSec = Math.floor(new Date(tradeTime).getTime() / 1000)
+        // Find the closest kline timestamp
+        let closest = klineTimes[0]
+        let minDiff = Math.abs(tradeSec - closest)
+        for (const kt of klineTimes) {
+          const diff = Math.abs(tradeSec - kt)
+          if (diff < minDiff) {
+            minDiff = diff
+            closest = kt
+          }
+          if (kt > tradeSec) break // klineTimes is sorted, no need to check further
+        }
+        return closest as Time
+      }
+
+      const markers: SeriesMarker<Time>[] = trades.map(trade => ({
+        time: snapToKline(trade.time),
+        position: trade.side === 'BUY' ? 'belowBar' as const : 'aboveBar' as const,
+        color: trade.side === 'BUY' ? colors.profitContainer : colors.lossContainer,
+        shape: trade.side === 'BUY' ? 'arrowUp' as const : 'arrowDown' as const,
+        text: `${trade.side} ${trade.quantity}@${trade.price.toFixed(2)}`,
+        size: 2,
+      }))
 
       markers.sort((a, b) => {
         const aTime = typeof a.time === 'number' ? a.time : new Date(a.time as string).getTime()
