@@ -8,6 +8,7 @@ interface TradingViewWidgetProps {
   theme?: 'light' | 'dark'
   minHeight?: number
   defaultHeight?: number
+  focusTime?: string  // ISO datetime string — chart scrolls to this time on load
 }
 
 declare global {
@@ -22,6 +23,7 @@ function TradingViewWidgetComponent({
   theme = 'dark',
   minHeight = 400,
   defaultHeight = 600,
+  focusTime,
 }: TradingViewWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<any>(null)
@@ -57,6 +59,16 @@ function TradingViewWidgetComponent({
       chartDiv.id = containerId
       chartDiv.style.height = '100%'
       containerRef.current.appendChild(chartDiv)
+
+      // Calculate focus range if focusTime is provided
+      let focusFrom: number | null = null
+      let focusTo: number | null = null
+      if (focusTime) {
+        const focusSec = Math.floor(new Date(focusTime).getTime() / 1000)
+        // Show ~2 hours around the focus time
+        focusFrom = focusSec - 3600
+        focusTo = focusSec + 3600
+      }
 
       // Create widget
       widgetRef.current = new window.TradingView.widget({
@@ -108,6 +120,22 @@ function TradingViewWidgetComponent({
           foregroundColor: colors.primary,
         },
       })
+
+      // Scroll to focus time after chart is ready
+      if (focusFrom !== null && focusTo !== null && widgetRef.current.onChartReady) {
+        const from = focusFrom
+        const to = focusTo
+        widgetRef.current.onChartReady(() => {
+          try {
+            widgetRef.current.chart().setVisibleRange({
+              from,
+              to,
+            })
+          } catch (e) {
+            console.warn('Failed to set visible range:', e)
+          }
+        })
+      }
     }
 
     if (!script) {

@@ -268,6 +268,7 @@ export function PositionDetailPage() {
               symbol={position.symbol}
               defaultInterval="1"
               defaultHeight={500}
+              focusTime={position.trades.find(t => t.side === 'BUY')?.executed_at}
             />
           </div>
 

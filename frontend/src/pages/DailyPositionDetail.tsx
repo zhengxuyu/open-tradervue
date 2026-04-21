@@ -245,6 +245,7 @@ export function DailyPositionDetail() {
               symbol={symbol}
               defaultInterval="1"
               defaultHeight={500}
+              focusTime={trades.find(t => t.side === 'BUY')?.executed_at}
             />
           </div>
 
