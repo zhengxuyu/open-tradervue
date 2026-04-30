@@ -1,0 +1,482 @@
+//@version=6
+strategy("Ross Strategies", overlay=true, default_qty_type=strategy.fixed, default_qty_value=30, initial_capital=100000, commission_type=strategy.commission.percent, commission_value=0.1, slippage=1, calc_on_every_tick=true, max_labels_count=500)
+
+// ── Inputs ──────────────────────────────────────────────────────────────────
+grpMom = "Momentum"
+surgePct   = input.float(3.0, "Surge Min Move %",        minval=0.5,maxval=30, step=0.5, group=grpMom, tooltip="Min % gain from recent low to confirm momentum")
+surgeBars  = input.int(15,    "Surge Lookback",          minval=3,  maxval=30, group=grpMom)
+
+grpMP = "Mini Pullback (MP)"
+mpEnable   = input.bool(true, "Enable",                  group=grpMP)
+mpMaxBars  = input.int(5,     "Max PB Bars",             minval=1,  maxval=10, group=grpMP)
+mpVolShrink= input.float(1.0, "PB Vol Shrink",           minval=0.3,maxval=2.0,step=0.1, group=grpMP, tooltip="1.0 = no volume filter")
+
+grpBF = "Bull Flag (BF)"
+bfEnable   = input.bool(true, "Enable",                  group=grpBF)
+bfMinBars  = input.int(5,     "Min Flag Bars",           minval=3,  maxval=15, group=grpBF)
+bfMaxBars  = input.int(15,    "Max Flag Bars",           minval=5,  maxval=30, group=grpBF)
+bfMaxSlope = input.float(0.5, "Max Flag Slope (ATR)",    minval=0.1,maxval=2,  step=0.1, group=grpBF)
+
+grpFT = "Flat Top Breakout (FT)"
+ftEnable   = input.bool(true, "Enable",                  group=grpFT)
+ftTouches  = input.int(3,     "Min Touches",             minval=2,  maxval=5,  group=grpFT)
+ftTol      = input.float(0.2, "Tolerance (ATR%)",        minval=0.1,maxval=2,  step=0.1, group=grpFT)
+ftLookback = input.int(20,    "Lookback Bars",           minval=5,  maxval=50, group=grpFT)
+
+grpR2G = "Red to Green (R2G)"
+r2gEnable  = input.bool(true, "Enable",                  group=grpR2G)
+
+grpEntry = "Entry Mode"
+entryMode  = input.string("Aggressive", "Entry Mode", options=["Aggressive", "Breakout"], group=grpEntry, tooltip="Aggressive = first green candle after pullback; Breakout = wait for breakout above pullback high")
+
+grpTrend = "Trend Filter"
+useTrendFilter = input.bool(true, "Require Above VWAP",  group=grpTrend, tooltip="Only long when price > VWAP")
+reqDayMom      = input.bool(false,"Require Day Momentum", group=grpTrend, tooltip="Only trade on days where stock is up from open")
+dayMomPct      = input.float(2.0, "Min Day Move %",       minval=0.5, maxval=20, step=0.5, group=grpTrend, tooltip="Stock must be up this % from day open")
+cooldownBars   = input.int(0,     "Cooldown After Loss",  minval=0, maxval=30, group=grpTrend, tooltip="Bars to wait after a stop loss before re-entering")
+
+grpRisk = "Risk"
+maxDayLoss = input.int(99,    "Max Losses/Day",          minval=1,  maxval=99, group=grpRisk)
+eodClose   = input.bool(true, "Close EOD",               group=grpRisk)
+maxStopPct = input.float(4.0, "Max Stop %",              minval=0.5,maxval=10, step=0.5, group=grpRisk, tooltip="Stop loss capped at this % below entry")
+trailDrop  = input.float(5.0, "Trail Drop %",            minval=1,  maxval=15, step=0.5, group=grpRisk, tooltip="Exit when price drops this % from peak")
+useEmaExit = input.bool(true, "Exit on EMA Break",       group=grpRisk, tooltip="Exit when close breaks below EMA after min hold")
+emaLen     = input.int(9,     "Exit EMA Length",          minval=5,  maxval=20, group=grpRisk)
+minHold    = input.int(5,     "Min Hold Bars",            minval=1,  maxval=20, group=grpRisk, tooltip="Bars to hold before trailing/EMA exit activates")
+tradeStart = input.int(4,     "Start Hour (ET)",         minval=4,  maxval=15, group=grpRisk)
+tradeEnd   = input.int(12,    "End Hour (ET)",           minval=10, maxval=16, group=grpRisk)
+minStopPct = input.float(1.0, "Min Stop %",              minval=0.3,maxval=5,  step=0.1, group=grpRisk, tooltip="Skip trade if stop loss is less than this % below entry")
+partialPct = input.float(50,  "Sell % at 1:1",           minval=0,  maxval=100,step=10,  group=grpRisk, tooltip="Sell this % of position when profit = risk (1:1). 0 = disabled")
+reqVolConf = input.bool(false,"Require Volume on Entry",  group=grpRisk, tooltip="Breakout bar must have above-average volume")
+
+// ── Base ────────────────────────────────────────────────────────────────────
+atr14    = ta.atr(14)
+avgVol20 = ta.sma(volume, 20)
+relVol   = avgVol20 > 0 ? volume / avgVol20 : 0.0
+ema9     = ta.ema(close, emaLen)
+ema20    = ta.ema(close, 20)
+ema200   = ta.ema(close, 200)
+
+// VWAP
+isNewSession = ta.change(time("D")) != 0
+var float cumPV  = 0.0
+var float cumVol = 0.0
+hlc3Val = (high + low + close) / 3
+if isNewSession
+    cumPV  := hlc3Val * volume
+    cumVol := volume
+else
+    cumPV  := cumPV + hlc3Val * volume
+    cumVol := cumVol + volume
+vwapVal = cumVol > 0 ? cumPV / cumVol : hlc3Val
+etHour   = hour(time, "America/New_York")
+etMin    = minute(time, "America/New_York")
+isEOD    = etHour == 15 and etMin >= 55
+inWindow = etHour >= tradeStart and etHour < tradeEnd
+isNewDay = ta.change(time("D")) != 0
+dayOpen  = ta.valuewhen(isNewDay, open, 0)
+
+var int dayLosses = 0
+var int lastLossBar = 0
+if isNewDay
+    dayLosses := 0
+
+// Day change from open
+dayChangePct = dayOpen > 0 ? (close - dayOpen) / dayOpen * 100 : 0.0
+// Day momentum: stock must be up from day open
+dayMomOk   = not reqDayMom or dayChangePct >= dayMomPct
+// Cooldown: wait N bars after a loss
+cooldownOk = bar_index - lastLossBar >= cooldownBars
+
+// ── Pre-market High (key breakout level) ────────────────────────────────────
+var float pmHigh = na
+isPreMarket  = etHour >= 4 and (etHour < 9 or (etHour == 9 and etMin < 30))
+isRegularMkt = etHour >= 9 and not (etHour == 9 and etMin < 30) and etHour < 16
+// Trend filter: VWAP in regular hours, 9 EMA in pre-market
+trendOk    = not useTrendFilter or (isRegularMkt ? close > vwapVal : close > ema9)
+canTrade   = true
+if isNewDay
+    pmHigh := na
+if isPreMarket
+    pmHigh := na(pmHigh) ? high : math.max(pmHigh, high)
+
+// ── HOD tracking ────────────────────────────────────────────────────────────
+var float hodLevel = na
+if isNewDay
+    hodLevel := high
+if high > nz(hodLevel)
+    hodLevel := high
+
+// Surge detection: price up X% from today's low (not rolling window)
+var float dayLow = low
+if isNewDay
+    dayLow := low
+dayLow := math.min(nz(dayLow, low), low)
+surgeMove  = nz(dayLow) > 0 ? (close - dayLow) / dayLow * 100 : 0.0
+surgeFound = surgeMove >= surgePct
+surgeHigh  = ta.highest(high, surgeBars)
+
+isRedBar   = close < open
+isGreenBar = close > open
+
+// ── Strategy 1: Mini Pullback (MP) ──────────────────────────────────────────
+// Simple: first green candle after 1-N consecutive red candles in a surge = MP
+newHOD = high > surgeHigh[1] and surgeFound and isGreenBar
+
+// Count consecutive red bars
+var int redStreak = 0
+redStreak := isRedBar ? redStreak + 1 : 0
+
+// Track pullback low
+var float mpLow = na
+if redStreak == 1
+    mpLow := low
+if redStreak > 1
+    mpLow := math.min(nz(mpLow), low)
+
+// MP ready: current bar is green, previous bar(s) were red (1 to N), surge is active
+mpBreak = high[1]
+mpReady = isGreenBar and nz(redStreak[1]) >= 1 and nz(redStreak[1]) <= mpMaxBars and surgeFound and mpEnable
+
+// Debug removed
+
+// ── Strategy 2: Bull Flag (BF) ──────────────────────────────────────────────
+var int   bfCnt   = 0
+var float bfHigh  = na
+var float bfLow   = na
+var float bfBreak = na
+var bool  bfReady = false
+
+// After new HOD, start counting consolidation
+if newHOD and bfEnable
+    bfCnt   := 0
+    bfHigh  := na
+    bfLow   := na
+    bfBreak := na
+    bfReady := false
+
+if surgeFound and not newHOD and bfEnable
+    bfCnt := bfCnt + 1
+    if bfCnt == 1
+        bfHigh := high
+        bfLow  := low
+    else
+        bfHigh := math.max(nz(bfHigh), high)
+        bfLow  := math.min(nz(bfLow), low)
+
+bfRange    = not na(bfHigh) and not na(bfLow) ? bfHigh - bfLow : 999.0
+bfNarrow   = not na(atr14) and atr14 > 0 ? bfRange / atr14 <= bfMaxSlope * bfCnt : false
+bfReady    := bfCnt >= bfMinBars and bfCnt <= bfMaxBars and surgeFound and bfNarrow and not na(bfHigh) and bfEnable
+bfBreak    := bfReady ? bfHigh : na
+
+if bfCnt > bfMaxBars
+    bfReady := false
+
+// ── Strategy 3: Flat Top Breakout (FT) ──────────────────────────────────────
+var float ftLevel = na
+var int   ftCount = 0
+var bool  ftReady = false
+
+// Find resistance: count highs touching same level within tolerance
+ftTolAbs  = nz(atr14) * ftTol
+ftCurHigh = ta.highest(high, ftLookback)
+ftTouched = 0
+for i = 0 to ftLookback - 1
+    if math.abs(high[i] - ftCurHigh) <= ftTolAbs
+        ftTouched := ftTouched + 1
+
+ftReady := ftTouched >= ftTouches and close < ftCurHigh and ftEnable
+ftLevel := ftReady ? ftCurHigh : na
+
+// ── Strategy 4: Red to Green (R2G) ──────────────────────────────────────────
+var bool r2gTriggered = false
+if isNewDay
+    r2gTriggered := false
+
+prevDayClose = ta.valuewhen(isNewDay, close[1], 0)
+wasRed       = not na(prevDayClose) and open < prevDayClose and not r2gTriggered
+r2gSignal    = wasRed and close > prevDayClose and close > open and relVol >= 1.5 and r2gEnable
+r2gSl        = wasRed ? math.min(low, ta.lowest(low, 3)) : na
+
+// ── Entry Logic (priority: R2G > MP > FT > BF) ─────────────────────────────
+var string lastStrat = ""
+var float  sl        = na
+var float  peakHigh  = na   // highest price since entry (for trailing)
+
+// Helper: cap stop loss at maxStopPct below entry price
+capSl(float entryPx, float rawSl) =>
+    maxSl = entryPx * (1 - maxStopPct / 100)
+    math.max(rawSl, maxSl)
+
+// Helper: check if stop is far enough from entry
+stopOk(float entryPx, float stopPx) =>
+    entryPx > 0 and stopPx > 0 and (entryPx - stopPx) / entryPx * 100 >= minStopPct
+
+isAggressive = entryMode == "Aggressive"
+
+// ── ENTRY: with position check and stop validation ──────────────────────────
+
+if mpReady
+    sl := capSl(close, nz(mpLow) - syminfo.mintick)
+    if stopOk(close, sl)
+        lastStrat := "MP"
+        peakHigh  := close
+        strategy.entry("MP", strategy.long, comment="MP")
+        strategy.exit("SL", "MP", stop=sl, comment="MP SL")
+
+if not mpReady and ftReady and not na(ftLevel)
+    sl := capSl(close, close - nz(atr14) * 1.5)
+    if stopOk(close, sl)
+        lastStrat := "FT"
+        peakHigh  := close
+        strategy.entry("FT", strategy.long, stop=ftLevel, comment="FT")
+        strategy.exit("SL", "FT", stop=sl, comment="FT SL")
+
+if not mpReady and not ftReady and bfReady and not na(bfBreak)
+    sl := capSl(close, nz(bfLow) - syminfo.mintick)
+    if stopOk(close, sl)
+        lastStrat := "BF"
+        peakHigh  := close
+        strategy.entry("BF", strategy.long, stop=bfBreak, comment="BF")
+        strategy.exit("SL", "BF", stop=sl, comment="BF SL")
+
+if not mpReady and not ftReady and not bfReady and r2gSignal and not r2gTriggered and r2gEnable
+    sl := capSl(close, nz(r2gSl) - syminfo.mintick)
+    if stopOk(close, sl)
+        lastStrat    := "R2G"
+        r2gTriggered := true
+        peakHigh     := close
+        strategy.entry("R2G", strategy.long, comment="R2G")
+        strategy.exit("SL", "R2G", stop=sl, comment="R2G SL")
+
+// Cancel if no setup
+noSetup = not mpReady and not bfReady and not ftReady and not r2gSignal
+if noSetup and strategy.position_size == 0
+    strategy.cancel("MP")
+    strategy.cancel("BF")
+    strategy.cancel("FT")
+    strategy.cancel("R2G")
+
+// ── Partial Profit: sell half at 1:1 R:R ────────────────────────────────────
+var bool partialDone = false
+var float partialTarget = na
+if strategy.position_size > 0 and strategy.position_size[1] == 0
+    partialDone   := false
+    risk11        = strategy.position_avg_price - nz(sl)
+    partialTarget := risk11 > 0 ? strategy.position_avg_price + risk11 : na
+if strategy.position_size > 0 and not partialDone and partialPct > 0 and not na(partialTarget)
+    if high >= partialTarget
+        strategy.order(lastStrat + " 1:1", strategy.short, qty=math.round(strategy.position_size * partialPct / 100), comment="Half")
+        partialDone := true
+        sl := strategy.position_avg_price  // move stop to breakeven after partial
+
+// ── Trailing Exit: ride trend, exit on drop or EMA break ────────────────────
+var int holdBars = 0
+if strategy.position_size > 0 and strategy.position_size[1] == 0
+    holdBars := 0
+if strategy.position_size > 0
+    holdBars := holdBars + 1
+    peakHigh := math.max(nz(peakHigh), high)
+    if holdBars >= minHold
+        trailSl = peakHigh * (1 - trailDrop / 100)
+        if trailSl > nz(sl)
+            sl := trailSl
+            strategy.exit("Trail", lastStrat, stop=sl, comment=lastStrat + " Trail")
+        if useEmaExit and close < ema9 * 0.99 and close < open
+            label.new(bar_index, high, "EMA!", style=label.style_label_down, color=color.new(#FF9800, 30), textcolor=color.white, size=size.small)
+
+// EOD
+if eodClose and isEOD and strategy.position_size > 0
+    strategy.close_all(comment="EOD")
+
+// ── Track Fills ─────────────────────────────────────────────────────────────
+isLong  = strategy.position_size > 0
+gotBuy  = isLong and strategy.position_size[1] == 0
+gotSell = not isLong and strategy.position_size[1] > 0
+
+// Persistent lines for stop/target (survive after exit)
+var line entryLine = na
+var line slLine    = na
+var line tpLine    = na
+var line tp11Line  = na
+
+if gotBuy
+    bfCnt   := 0
+    bfReady := false
+    // Draw entry lines
+    entryLine := line.new(bar_index, strategy.position_avg_price, bar_index + 50, strategy.position_avg_price, color=#0000FF, width=2, style=line.style_solid)
+    if not na(sl)
+        slLine := line.new(bar_index, sl, bar_index + 50, sl, color=#FF0000, width=3, style=line.style_solid)
+    tp8 = strategy.position_avg_price * 1.08
+    tpLine := line.new(bar_index, tp8, bar_index + 50, tp8, color=#FFD700, width=2, style=line.style_dashed)
+    if not na(partialTarget)
+        tp11Line := line.new(bar_index, partialTarget, bar_index + 50, partialTarget, color=#FFD700, width=1, style=line.style_dotted)
+
+if gotSell
+    if strategy.losstrades > strategy.losstrades[1]
+        dayLosses  := dayLosses + 1
+        lastLossBar := bar_index
+    // End lines at exit bar
+    if not na(entryLine)
+        line.set_x2(entryLine, bar_index)
+    if not na(slLine)
+        line.set_x2(slLine, bar_index)
+    if not na(tpLine)
+        line.set_x2(tpLine, bar_index)
+    if not na(tp11Line)
+        line.set_x2(tp11Line, bar_index)
+    sl       := na
+    peakHigh := na
+
+// Update stop loss line position when trailing
+if isLong and not na(slLine) and not na(sl)
+    line.set_y1(slLine, sl)
+    line.set_y2(slLine, sl)
+    line.set_x2(slLine, bar_index + 10)
+
+// Strategy name is shown via comment= in strategy.entry/exit/close (no extra labels)
+
+// Position lines
+trailLine  = isLong and not na(peakHigh) ? peakHigh * (1 - trailDrop / 100) : na
+tp8pct     = isLong ? strategy.position_avg_price * 1.08 : na  // 8% profit target
+// Exhaustion signal: price near high but volume fading (momentum dying)
+var float peakLine = na
+if isLong and not na(peakHigh) and avgVol20 > 0
+    volFading = volume < avgVol20 * 0.5 and volume[1] < avgVol20 * 0.7
+    nearPeak  = high >= peakHigh * 0.98
+    if volFading and nearPeak and peakHigh > strategy.position_avg_price * 1.02
+        peakLine := peakHigh
+
+if not isLong
+    peakLine := na
+
+plot(isLong ? strategy.position_avg_price : na, title="Entry",      color=#0000FF,      style=plot.style_linebr, linewidth=2)
+plot(isLong ? sl                          : na, title="Stop Loss",  color=#FF0000,      style=plot.style_linebr, linewidth=3)
+plot(isLong ? trailLine                   : na, title="Trail Stop", color=#FF6600,      style=plot.style_linebr, linewidth=2)
+plot(tp8pct,                                     title="8% Target", color=#FFD700,      style=plot.style_linebr, linewidth=3)
+plot(isLong ? peakLine                    : na, title="Exhaustion", color=#00FF00,      style=plot.style_linebr, linewidth=3)
+plot(isLong ? peakHigh                    : na, title="Peak High",  color=color.new(#00FF00, 60), style=plot.style_linebr, linewidth=1)
+// Pre-market high & HOD lines
+plot(isRegularMkt and not na(pmHigh) ? pmHigh : na, title="PM High", color=#FF00FF, style=plot.style_linebr, linewidth=2)
+plot(hodLevel, title="HOD", color=color.new(#00FFFF, 40), style=plot.style_linebr, linewidth=1)
+// Partial profit target (1:1)
+plot(isLong and not partialDone and not na(partialTarget) ? partialTarget : na, title="1:1 Target", color=#FFD700, style=plot.style_cross, linewidth=2)
+
+// Pending levels
+// Pending levels shown as thin dashed lines (less clutter than circles)
+plot(mpReady and not isLong ? mpBreak : na, title="MP Level", color=color.new(color.yellow, 50), style=plot.style_linebr, linewidth=1)
+plot(bfReady and not isLong ? bfBreak : na, title="BF Level", color=color.new(color.aqua, 50),   style=plot.style_linebr, linewidth=1)
+plot(ftReady and not isLong ? ftLevel : na, title="FT Level", color=color.new(color.fuchsia, 50), style=plot.style_linebr, linewidth=1)
+
+// Bar colors
+// barcolor disabled — keep default candle colors
+
+// EMA + VWAP plots
+plot(ema9,   title="9 EMA",   color=#00BCD4, linewidth=2)
+plot(ema20,  title="20 EMA",  color=#FF9800, linewidth=2)
+plot(ema200, title="200 EMA", color=#9C27B0, linewidth=1)
+plot(vwapVal, title="VWAP",   color=#2196F3, linewidth=2)
+
+// VWAP Bands
+var float cumPV2 = 0.0
+if isNewSession
+    cumPV2 := hlc3Val * hlc3Val * volume
+else
+    cumPV2 := cumPV2 + hlc3Val * hlc3Val * volume
+vwapVar = cumVol > 0 ? cumPV2 / cumVol - vwapVal * vwapVal : 0.0
+vwapStd = math.sqrt(math.max(vwapVar, 0))
+plot(vwapVal + vwapStd,     title="+1 SD", color=color.new(#2196F3, 60), linewidth=1)
+plot(vwapVal - vwapStd,     title="-1 SD", color=color.new(#2196F3, 60), linewidth=1)
+plot(vwapVal + vwapStd * 2, title="+2 SD", color=color.new(#2196F3, 80), linewidth=1, style=plot.style_circles)
+plot(vwapVal - vwapStd * 2, title="-2 SD", color=color.new(#2196F3, 80), linewidth=1, style=plot.style_circles)
+
+// EMA as dynamic support/resistance (Ross's usage)
+refOffset = input.float(1.5, "Label Distance (ATR)",  minval=0.5, maxval=5, step=0.5, group=grpRisk, tooltip="How far labels sit from the bar, in ATR units")
+refDist   = nz(atr14) * refOffset
+// EMA lines are reference only — no labels
+// VWAP cross: shown as bar color change instead of labels (no overlap)
+vwapCrossUp   = close[1] < vwapVal[1] and close > vwapVal
+vwapCrossDown = close[1] > vwapVal[1] and close < vwapVal
+// VWAP cross shown in panel only, no bar color change
+bgcolor(mpReady and not isLong ? color.new(color.yellow, 92) : na, title="MP Setup")
+bgcolor(bfReady and not isLong ? color.new(color.aqua, 92)   : na, title="BF Setup")
+
+// ── 5 Pillars + Info Panel ──────────────────────────────────────────────────
+floatM       = syminfo.shares_outstanding_float > 0 ? syminfo.shares_outstanding_float / 1e6 : na
+p1 = not na(floatM) and floatM < 20
+p2 = relVol >= 5
+p3 = dayChangePct >= 4
+p4 = close >= 2 and close <= 20
+pCnt = (p1 ? 1 : 0) + (p2 ? 1 : 0) + (p3 ? 1 : 0) + (p4 ? 1 : 0)
+
+aboveEma9  = close > ema9
+aboveEma20 = close > ema20
+aboveVwap  = close > vwapVal
+emaStack   = ema9 > ema20 and ema20 > ema200
+
+abovePM    = not na(pmHigh) and close > pmHigh
+atHOD      = not na(hodLevel) and high >= hodLevel * 0.995
+
+var table panel = table.new(position.top_right, 4, 9, bgcolor=color.new(color.black, 30), border_width=1)
+if barstate.islast
+    // Row 0: Setups | EMA/VWAP header
+    table.cell(panel, 0, 0, "MP",    text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 0, mpReady ? "RDY" : "—", text_color=mpReady ? color.yellow : color.gray, text_size=size.small)
+    table.cell(panel, 2, 0, "9EMA",  text_color=color.white, text_size=size.small)
+    table.cell(panel, 3, 0, aboveEma9 ? "▲" : "▼", text_color=aboveEma9 ? color.lime : color.red, text_size=size.small)
+    // Row 1
+    table.cell(panel, 0, 1, "BF",    text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 1, bfReady ? "RDY" : "—", text_color=bfReady ? color.aqua : color.gray, text_size=size.small)
+    table.cell(panel, 2, 1, "20EMA", text_color=color.white, text_size=size.small)
+    table.cell(panel, 3, 1, aboveEma20 ? "▲" : "▼", text_color=aboveEma20 ? color.lime : color.red, text_size=size.small)
+    // Row 2
+    table.cell(panel, 0, 2, "FT",    text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 2, ftReady ? "RDY" : "—", text_color=ftReady ? color.fuchsia : color.gray, text_size=size.small)
+    table.cell(panel, 2, 2, "VWAP",  text_color=color.white, text_size=size.small)
+    table.cell(panel, 3, 2, aboveVwap ? "▲" : "▼", text_color=aboveVwap ? color.lime : color.red, text_size=size.small)
+    // Row 3
+    table.cell(panel, 0, 3, "R2G",   text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 3, r2gSignal ? "SIG" : "—", text_color=r2gSignal ? color.lime : color.gray, text_size=size.small)
+    table.cell(panel, 2, 3, "Stack", text_color=color.white, text_size=size.small)
+    table.cell(panel, 3, 3, emaStack ? "YES" : "NO", text_color=emaStack ? color.lime : color.red, text_size=size.small)
+    // Row 4: Position + 5 Pillars
+    table.cell(panel, 0, 4, "Pos",   text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 4, isLong ? lastStrat : "FLAT", text_color=isLong ? color.lime : color.gray, text_size=size.small)
+    table.cell(panel, 2, 4, "Trend", text_color=color.white, text_size=size.small)
+    table.cell(panel, 3, 4, trendOk ? "UP" : "DOWN", text_color=trendOk ? color.lime : color.red, text_size=size.small)
+    // Row 5: Day Loss + Day Change
+    table.cell(panel, 0, 5, "Loss",  text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 5, str.tostring(dayLosses) + "/" + str.tostring(maxDayLoss), text_color=canTrade ? color.lime : color.red, text_size=size.small)
+    table.cell(panel, 2, 5, "Chg%",  text_color=color.white, text_size=size.small)
+    table.cell(panel, 3, 5, str.tostring(dayChangePct, "#.#") + "%", text_color=p3 ? color.lime : color.red, text_size=size.small)
+    // Row 6: P&L + RelVol
+    table.cell(panel, 0, 6, "P&L",   text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 6, str.tostring(strategy.netprofit, "#.##"), text_color=strategy.netprofit >= 0 ? color.lime : color.red, text_size=size.small)
+    table.cell(panel, 2, 6, "RVol",  text_color=color.white, text_size=size.small)
+    table.cell(panel, 3, 6, str.tostring(relVol, "#.#") + "x", text_color=p2 ? color.lime : color.red, text_size=size.small)
+    // Row 7: PM High + HOD
+    table.cell(panel, 0, 7, "PMH",   text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 7, not na(pmHigh) ? str.tostring(pmHigh, "#.##") : "—", text_color=abovePM ? color.lime : color.gray, text_size=size.small)
+    table.cell(panel, 2, 7, "HOD",   text_color=color.white, text_size=size.small)
+    table.cell(panel, 3, 7, not na(hodLevel) ? str.tostring(hodLevel, "#.##") : "—", text_color=atHOD ? color.lime : color.gray, text_size=size.small)
+    // Row 8: Half + Vol
+    table.cell(panel, 0, 8, "Half",  text_color=color.white, text_size=size.small)
+    table.cell(panel, 1, 8, isLong ? (partialDone ? "DONE" : "WAIT") : "—", text_color=partialDone ? color.lime : color.yellow, text_size=size.small)
+    table.cell(panel, 2, 8, "VolOK", text_color=color.white, text_size=size.small)
+    table.cell(panel, 3, 8, relVol >= 1.0 ? "YES" : "NO", text_color=relVol >= 1.0 ? color.lime : color.red, text_size=size.small)
+
+// ── Alerts (with prices) ─────────────────────────────────────────────────────
+// Setup alerts: tell you WHERE to place the buy stop + stop loss
+if mpReady and nz(redStreak[1]) >= 1
+    alert("MP Setup: Buy Stop @ " + str.tostring(mpBreak, "#.##") + " | SL @ " + str.tostring(sl, "#.##") + " | " + syminfo.ticker, alert.freq_once_per_bar)
+if bfReady and bfCnt == bfMinBars
+    alert("BF Setup: Buy Stop @ " + str.tostring(bfBreak, "#.##") + " | SL @ " + str.tostring(sl, "#.##") + " | " + syminfo.ticker, alert.freq_once_per_bar)
+if ftReady and ftTouched == ftTouches
+    alert("FT Setup: Buy Stop @ " + str.tostring(ftLevel, "#.##") + " | SL @ " + str.tostring(sl, "#.##") + " | " + syminfo.ticker, alert.freq_once_per_bar)
+if r2gSignal and not r2gTriggered
+    alert("R2G Signal: Buy NOW @ " + str.tostring(close, "#.##") + " | SL @ " + str.tostring(sl, "#.##") + " | " + syminfo.ticker, alert.freq_once_per_bar)
+// Fill & exit alerts
+if gotBuy
+    alert("FILLED: " + lastStrat + " @ " + str.tostring(strategy.position_avg_price, "#.##") + " | " + syminfo.ticker, alert.freq_once_per_bar)
+if gotSell
+    alert("EXIT: " + lastStrat + " @ " + str.tostring(close, "#.##") + " | " + syminfo.ticker, alert.freq_once_per_bar)
