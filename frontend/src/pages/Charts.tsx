@@ -4,7 +4,7 @@ import { TopAppBar } from '@/components/TopAppBar'
 import { Icon } from '@/components/Icon'
 import { TradingViewWidget } from '@/components/TradingViewWidget'
 import { getPositions, getAnalysisBySymbol, type SymbolAnalysis, type Position } from '@/services/api'
-import { formatCurrency, cn } from '@/lib/utils'
+import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
 import { PnLValue } from '@/components/Badge'
 
 export function Charts() {
@@ -179,10 +179,10 @@ export function Charts() {
                             )}
                           </td>
                           <td className="px-6 py-3 text-xs text-outline">
-                            {new Date(trade.entry_time).toLocaleString()}
+                            {formatDateTime(trade.entry_time)}
                           </td>
                           <td className="px-6 py-3 text-xs text-outline">
-                            {trade.exit_time ? new Date(trade.exit_time).toLocaleString() : '-'}
+                            {trade.exit_time ? formatDateTime(trade.exit_time) : '-'}
                           </td>
                         </tr>
                       ))}

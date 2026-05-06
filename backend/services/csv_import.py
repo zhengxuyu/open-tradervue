@@ -66,15 +66,17 @@ class CSVImportService:
         return side
 
     def _convert_timezone(self, dt: datetime, source_tz: Optional[str]) -> datetime:
-        """Convert datetime from source timezone to UTC."""
-        if not source_tz:
+        """Convert datetime from source timezone to US Eastern for storage.
+        All datetimes in the database are naive Eastern time."""
+        if not source_tz or source_tz == "America/New_York":
             return dt
 
         try:
+            eastern = ZoneInfo("America/New_York")
             source_zone = ZoneInfo(source_tz)
             localized = dt.replace(tzinfo=source_zone)
-            utc_dt = localized.astimezone(ZoneInfo("UTC"))
-            return utc_dt.replace(tzinfo=None)
+            eastern_dt = localized.astimezone(eastern)
+            return eastern_dt.replace(tzinfo=None)
         except Exception:
             return dt
 

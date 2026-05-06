@@ -29,6 +29,8 @@ export function Trades() {
   const [filters, setFilters] = useState({
     symbol: '',
     status: 'closed' as '' | 'open' | 'closed',
+    dateFrom: '',
+    dateTo: '',
   })
   const [highlightedId, setHighlightedId] = useState<number | null>(null)
   const highlightedRowRef = useRef<HTMLTableRowElement>(null)
@@ -203,8 +205,17 @@ export function Trades() {
       }
     })
 
-    return Array.from(groups.values()).sort((a, b) => b.date.localeCompare(a.date))
-  }, [positions])
+    let result = Array.from(groups.values())
+
+    if (filters.dateFrom) {
+      result = result.filter(g => g.date >= filters.dateFrom)
+    }
+    if (filters.dateTo) {
+      result = result.filter(g => g.date <= filters.dateTo)
+    }
+
+    return result.sort((a, b) => b.date.localeCompare(a.date))
+  }, [positions, filters.dateFrom, filters.dateTo])
 
   const closedCount = positions.filter(p => p.status === 'closed').length
   const openCount = positions.filter(p => p.status === 'open').length
@@ -237,6 +248,31 @@ export function Trades() {
               placeholder="Search symbol..."
               className="w-full pl-10 pr-4 py-2 bg-surface-container rounded-lg text-sm text-on-surface placeholder:text-outline border border-outline-variant/10 focus:outline-none focus:ring-1 focus:ring-primary/40"
             />
+          </div>
+
+          {/* Date range */}
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+              className="px-3 py-2 bg-surface-container rounded-lg text-sm text-on-surface border border-outline-variant/10 focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
+            <span className="text-outline text-xs">to</span>
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+              className="px-3 py-2 bg-surface-container rounded-lg text-sm text-on-surface border border-outline-variant/10 focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
+            {(filters.dateFrom || filters.dateTo) && (
+              <button
+                onClick={() => setFilters({ ...filters, dateFrom: '', dateTo: '' })}
+                className="text-outline hover:text-on-surface transition-colors"
+              >
+                <Icon name="close" className="text-base" />
+              </button>
+            )}
           </div>
 
           {/* Side toggle */}

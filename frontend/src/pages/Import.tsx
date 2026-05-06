@@ -45,7 +45,7 @@ export function Import() {
   const [pastedContent, setPastedContent] = useState('')
   const [preview, setPreview] = useState<CSVPreview | null>(null)
   const [mapping, setMapping] = useState<Record<string, string>>({})
-  const [timezone, setTimezone] = useState('Europe/London')
+  const [timezone, setTimezone] = useState('America/New_York')
   const [result, setResult] = useState<ImportResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
