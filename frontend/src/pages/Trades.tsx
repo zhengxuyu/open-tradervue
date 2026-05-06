@@ -28,9 +28,10 @@ export function Trades() {
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
     symbol: '',
-    status: 'closed' as '' | 'open' | 'closed',
+    status: '' as '' | 'open' | 'closed',
     dateFrom: '',
     dateTo: '',
+    pnl: '' as '' | 'win' | 'loss',
   })
   const [highlightedId, setHighlightedId] = useState<number | null>(null)
   const highlightedRowRef = useRef<HTMLTableRowElement>(null)
@@ -213,13 +214,23 @@ export function Trades() {
     if (filters.dateTo) {
       result = result.filter(g => g.date <= filters.dateTo)
     }
+    if (filters.pnl === 'win') {
+      result = result.filter(g => g.totalPnl !== null && g.totalPnl > 0)
+    } else if (filters.pnl === 'loss') {
+      result = result.filter(g => g.totalPnl !== null && g.totalPnl <= 0)
+    }
 
     return result.sort((a, b) => b.date.localeCompare(a.date))
-  }, [positions, filters.dateFrom, filters.dateTo])
+  }, [positions, filters.dateFrom, filters.dateTo, filters.pnl])
 
-  const closedCount = positions.filter(p => p.status === 'closed').length
-  const openCount = positions.filter(p => p.status === 'open').length
+  const uniqueSymbols = useMemo(() => {
+    const syms = new Set(positions.map(p => p.symbol))
+    return Array.from(syms).sort()
+  }, [positions])
+
   const hasSelection = selectedIds.size > 0
+  const hasFilters = filters.symbol || filters.dateFrom || filters.dateTo || filters.status || filters.pnl
+  const clearFilters = () => setFilters({ symbol: '', status: '', dateFrom: '', dateTo: '', pnl: '' })
 
   return (
     <div className="flex flex-col h-full">
@@ -235,147 +246,134 @@ export function Trades() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
-        {/* Filter section */}
-        <div className="bg-surface-container-low rounded-xl p-4 flex flex-wrap items-center gap-4">
-          {/* Search input */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg" />
-            <input
-              type="text"
-              value={filters.symbol}
-              onChange={(e) => setFilters({ ...filters, symbol: e.target.value.toUpperCase() })}
-              placeholder="Search symbol..."
-              className="w-full pl-10 pr-4 py-2 bg-surface-container rounded-lg text-sm text-on-surface placeholder:text-outline border border-outline-variant/10 focus:outline-none focus:ring-1 focus:ring-primary/40"
-            />
-          </div>
-
-          {/* Date range */}
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-              className="px-3 py-2 bg-surface-container rounded-lg text-sm text-on-surface border border-outline-variant/10 focus:outline-none focus:ring-1 focus:ring-primary/40"
-            />
-            <span className="text-outline text-xs">to</span>
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-              className="px-3 py-2 bg-surface-container rounded-lg text-sm text-on-surface border border-outline-variant/10 focus:outline-none focus:ring-1 focus:ring-primary/40"
-            />
-            {(filters.dateFrom || filters.dateTo) && (
+      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+        {/* Action bar */}
+        {(hasSelection || hasFilters) && (
+          <div className="flex items-center gap-3">
+            {hasSelection && (
               <button
-                onClick={() => setFilters({ ...filters, dateFrom: '', dateTo: '' })}
-                className="text-outline hover:text-on-surface transition-colors"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-tertiary-container text-on-tertiary-container text-sm font-medium hover:bg-tertiary-container/80 transition-colors disabled:opacity-50"
               >
-                <Icon name="close" className="text-base" />
+                <Icon name="delete" className="text-base" />
+                {isDeleting ? 'Deleting...' : `Delete (${selectedIds.size})`}
               </button>
             )}
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-outline hover:text-on-surface transition-colors"
+              >
+                <Icon name="filter_list_off" className="text-sm" />
+                Clear filters
+              </button>
+            )}
+            <span className="text-xs text-outline ml-auto">
+              {groupedPositions.length} result{groupedPositions.length !== 1 ? 's' : ''}
+            </span>
           </div>
-
-          {/* Side toggle */}
-          <div className="bg-surface-container rounded-lg p-1 flex">
-            <button
-              onClick={() => setFilters({ ...filters, status: '' })}
-              className={cn(
-                'px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors',
-                filters.status === ''
-                  ? 'bg-primary text-on-primary'
-                  : 'text-outline hover:text-on-surface'
-              )}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setFilters({ ...filters, status: 'closed' })}
-              className={cn(
-                'px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors',
-                filters.status === 'closed'
-                  ? 'bg-primary text-on-primary'
-                  : 'text-outline hover:text-on-surface'
-              )}
-            >
-              Closed ({closedCount})
-            </button>
-            <button
-              onClick={() => setFilters({ ...filters, status: 'open' })}
-              className={cn(
-                'px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors',
-                filters.status === 'open'
-                  ? 'bg-primary text-on-primary'
-                  : 'text-outline hover:text-on-surface'
-              )}
-            >
-              Open ({openCount})
-            </button>
-          </div>
-
-          {/* Delete button */}
-          {hasSelection && (
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-tertiary-container text-on-tertiary-container text-sm font-medium hover:bg-tertiary-container/80 transition-colors disabled:opacity-50"
-            >
-              <Icon name="delete" className="text-base" />
-              {isDeleting ? 'Deleting...' : `Delete (${selectedIds.size})`}
-            </button>
-          )}
-        </div>
+        )}
 
         {/* Data table */}
         <div className="bg-surface-container-lowest rounded-xl ghost-border overflow-hidden">
           {loading ? (
             <div className="text-center py-16 text-outline">Loading...</div>
-          ) : groupedPositions.length === 0 ? (
+          ) : positions.length === 0 ? (
             <div className="text-center py-16 text-outline">
-              {filters.status === 'open'
-                ? 'No open positions'
-                : 'No trades found. Import your trades to get started.'}
+              No trades found. Import your trades to get started.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full">
                 <thead>
+                  {/* Column labels */}
                   <tr className="border-b border-outline-variant/10">
                     <th className="px-4 py-3 text-left">
                       <input
                         type="checkbox"
-                        checked={selectedIds.size === positions.length && positions.length > 0}
+                        checked={selectedIds.size > 0 && groupedPositions.every(g => g.positionIds.every(id => selectedIds.has(id)))}
                         onChange={toggleSelectAll}
                         className="rounded border-outline-variant/30 bg-surface-container text-primary focus:ring-primary/40"
                       />
                     </th>
-                    <th className="px-5 py-3 text-left text-[10px] font-label uppercase tracking-widest text-outline">
-                      Date
+                    <th className="px-5 py-2 text-left text-[10px] font-label uppercase tracking-widest text-outline">Date</th>
+                    <th className="px-5 py-2 text-left text-[10px] font-label uppercase tracking-widest text-outline">Symbol</th>
+                    <th className="px-5 py-2 text-left text-[10px] font-label uppercase tracking-widest text-outline">Status</th>
+                    <th className="px-5 py-2 text-right text-[10px] font-label uppercase tracking-widest text-outline">Qty</th>
+                    <th className="px-5 py-2 text-right text-[10px] font-label uppercase tracking-widest text-outline">Avg Entry</th>
+                    <th className="px-5 py-2 text-right text-[10px] font-label uppercase tracking-widest text-outline">Avg Exit</th>
+                    <th className="px-5 py-2 text-right text-[10px] font-label uppercase tracking-widest text-outline">P&L</th>
+                    <th className="px-5 py-2 text-right text-[10px] font-label uppercase tracking-widest text-outline">%</th>
+                    <th className="px-5 py-2 text-right text-[10px] font-label uppercase tracking-widest text-outline">Trades</th>
+                    <th className="px-4 py-2 w-10"></th>
+                  </tr>
+                  {/* Filter row */}
+                  <tr className="border-b border-outline-variant/20 bg-surface-container-low/50">
+                    <th className="px-4 py-2"></th>
+                    {/* Date filter */}
+                    <th className="px-5 py-2 text-left">
+                      <div className="flex flex-col gap-1">
+                        <input
+                          type="date"
+                          value={filters.dateFrom}
+                          onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                          className="w-full px-1.5 py-1 bg-surface-container rounded text-[11px] text-on-surface border border-outline-variant/20 focus:outline-none focus:border-primary/40"
+                        />
+                        <input
+                          type="date"
+                          value={filters.dateTo}
+                          onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                          className="w-full px-1.5 py-1 bg-surface-container rounded text-[11px] text-on-surface border border-outline-variant/20 focus:outline-none focus:border-primary/40"
+                        />
+                      </div>
                     </th>
-                    <th className="px-5 py-3 text-left text-[10px] font-label uppercase tracking-widest text-outline">
-                      Symbol
+                    {/* Symbol filter */}
+                    <th className="px-5 py-2 text-left">
+                      <select
+                        value={filters.symbol}
+                        onChange={(e) => setFilters({ ...filters, symbol: e.target.value })}
+                        className="w-full px-1.5 py-1 bg-surface-container rounded text-[11px] text-on-surface border border-outline-variant/20 focus:outline-none focus:border-primary/40"
+                      >
+                        <option value="">All</option>
+                        {uniqueSymbols.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
                     </th>
-                    <th className="px-5 py-3 text-left text-[10px] font-label uppercase tracking-widest text-outline">
-                      Status
+                    {/* Status filter */}
+                    <th className="px-5 py-2 text-left">
+                      <select
+                        value={filters.status}
+                        onChange={(e) => setFilters({ ...filters, status: e.target.value as '' | 'open' | 'closed' })}
+                        className="w-full px-1.5 py-1 bg-surface-container rounded text-[11px] text-on-surface border border-outline-variant/20 focus:outline-none focus:border-primary/40"
+                      >
+                        <option value="">All</option>
+                        <option value="closed">Closed</option>
+                        <option value="open">Open</option>
+                      </select>
                     </th>
-                    <th className="px-5 py-3 text-right text-[10px] font-label uppercase tracking-widest text-outline">
-                      Qty
+                    {/* Qty - no filter */}
+                    <th className="px-5 py-2"></th>
+                    {/* Avg Entry - no filter */}
+                    <th className="px-5 py-2"></th>
+                    {/* Avg Exit - no filter */}
+                    <th className="px-5 py-2"></th>
+                    {/* P&L filter */}
+                    <th className="px-5 py-2 text-right">
+                      <select
+                        value={filters.pnl}
+                        onChange={(e) => setFilters({ ...filters, pnl: e.target.value as '' | 'win' | 'loss' })}
+                        className="w-full px-1.5 py-1 bg-surface-container rounded text-[11px] text-on-surface border border-outline-variant/20 focus:outline-none focus:border-primary/40"
+                      >
+                        <option value="">All</option>
+                        <option value="win">Win</option>
+                        <option value="loss">Loss</option>
+                      </select>
                     </th>
-                    <th className="px-5 py-3 text-right text-[10px] font-label uppercase tracking-widest text-outline">
-                      Avg Entry
-                    </th>
-                    <th className="px-5 py-3 text-right text-[10px] font-label uppercase tracking-widest text-outline">
-                      Avg Exit
-                    </th>
-                    <th className="px-5 py-3 text-right text-[10px] font-label uppercase tracking-widest text-outline">
-                      P&L
-                    </th>
-                    <th className="px-5 py-3 text-right text-[10px] font-label uppercase tracking-widest text-outline">
-                      %
-                    </th>
-                    <th className="px-5 py-3 text-right text-[10px] font-label uppercase tracking-widest text-outline">
-                      Trades
-                    </th>
-                    <th className="px-4 py-3 w-10"></th>
+                    {/* % - no filter */}
+                    <th className="px-5 py-2"></th>
+                    {/* Trades - no filter */}
+                    <th className="px-5 py-2"></th>
+                    <th className="px-4 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
