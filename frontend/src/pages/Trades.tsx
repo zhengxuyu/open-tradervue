@@ -313,18 +313,23 @@ export function Trades() {
                     <th className="px-4 py-2"></th>
                     {/* Date filter */}
                     <th className="px-5 py-2 text-left">
-                      <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5">
                         <input
                           type="date"
                           value={filters.dateFrom}
                           onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-                          className="w-full px-1.5 py-1 bg-surface-container rounded text-[11px] text-on-surface border border-outline-variant/20 focus:outline-none focus:border-primary/40"
+                          placeholder="From"
+                          title="Start date"
+                          className="w-[calc(50%-4px)] px-1.5 py-1 bg-surface-container rounded text-[11px] text-on-surface border border-outline-variant/20 focus:outline-none focus:border-primary/40"
                         />
+                        <span className="text-[9px] text-outline">–</span>
                         <input
                           type="date"
                           value={filters.dateTo}
                           onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                          className="w-full px-1.5 py-1 bg-surface-container rounded text-[11px] text-on-surface border border-outline-variant/20 focus:outline-none focus:border-primary/40"
+                          placeholder="To"
+                          title="End date"
+                          className="w-[calc(50%-4px)] px-1.5 py-1 bg-surface-container rounded text-[11px] text-on-surface border border-outline-variant/20 focus:outline-none focus:border-primary/40"
                         />
                       </div>
                     </th>
