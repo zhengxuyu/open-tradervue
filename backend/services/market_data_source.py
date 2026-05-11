@@ -4,17 +4,22 @@ import logging
 import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
+import pandas as pd
 import yfinance as yf
 from yfinance import screen as yf_screen
 
 from ..schemas import ScannerResultItem
 
 # US market hours
-_ET = timezone(timedelta(hours=-4))  # EDT
+_ET = ZoneInfo("America/New_York")
 _MARKET_OPEN_HOUR = 9
 _MARKET_OPEN_MIN = 30
 _MARKET_MINUTES = 390  # 6.5 hours
+_PRE_MARKET_START_MINUTE = 4 * 60
+_REGULAR_MARKET_OPEN_MINUTE = _MARKET_OPEN_HOUR * 60 + _MARKET_OPEN_MIN
+_CHART_BATCH_SIZE = 50
 
 
 def get_market_state() -> str:
@@ -46,6 +51,70 @@ def _minutes_of_trading() -> float:
     if state == "POST":
         return t - 16 * 60         # minutes since 4:00 PM
     return 1  # avoid division by zero
+
+
+def _session_minutes(index: pd.DatetimeIndex) -> pd.Series:
+    """Return minutes since midnight ET for each bar timestamp."""
+    dt_index = pd.DatetimeIndex(index)
+    if dt_index.tz is None:
+        dt_index = dt_index.tz_localize(_ET)
+    else:
+        dt_index = dt_index.tz_convert(_ET)
+    return pd.Series(dt_index.hour * 60 + dt_index.minute, index=index)
+
+
+def apply_premarket_chart_metrics(
+    item: ScannerResultItem,
+    bars: pd.DataFrame,
+    avg_volume_10d: float | None,
+    elapsed_minutes: float | None = None,
+) -> ScannerResultItem:
+    """Update a scanner item with accurate pre-market metrics from 1m chart bars."""
+    required_columns = {"Open", "High", "Low", "Close", "Volume"}
+    if bars.empty or not required_columns.issubset(set(bars.columns)):
+        return item
+
+    minutes = _session_minutes(pd.DatetimeIndex(bars.index))
+    premarket = bars.loc[
+        (minutes >= _PRE_MARKET_START_MINUTE)
+        & (minutes < _REGULAR_MARKET_OPEN_MINUTE)
+    ].copy()
+    premarket = premarket.dropna(subset=["Close"])
+    if premarket.empty:
+        return item
+
+    latest_price = float(premarket["Close"].iloc[-1])
+    high = float(premarket["High"].max())
+    low = float(premarket["Low"].min())
+    open_values = premarket["Open"].dropna()
+    open_price = float(open_values.iloc[0]) if not open_values.empty else latest_price
+    volume = int(premarket["Volume"].fillna(0).sum())
+    prev_close = item.prev_close
+
+    item.price = round(latest_price, 2)
+    item.volume = volume
+    item.day_high = round(high, 2)
+    item.day_low = round(low, 2)
+    item.open_price = round(open_price, 2)
+
+    if prev_close and prev_close > 0:
+        change_pct = (latest_price - prev_close) / prev_close * 100
+        item.change_from_close_pct = round(change_pct, 2)
+        item.gap_pct = round(change_pct, 2)
+
+    if avg_volume_10d and avg_volume_10d > 0:
+        item.relative_volume_daily = round(volume / avg_volume_10d, 2)
+        minutes_elapsed = elapsed_minutes if elapsed_minutes and elapsed_minutes > 0 else _minutes_of_trading()
+        if minutes_elapsed > 0:
+            rate_now = volume / minutes_elapsed
+            rate_avg = avg_volume_10d / _MARKET_MINUTES
+            if rate_avg > 0:
+                item.relative_volume_5min = round(rate_now / rate_avg, 2)
+
+    if high > low:
+        item.pos_in_range_pct = round((latest_price - low) / (high - low) * 100, 2)
+
+    return item
 
 logger = logging.getLogger("daytradedash.datasource")
 
@@ -168,15 +237,85 @@ class MarketDataSource:
         count: int = 200,
     ) -> list[ScannerResultItem]:
         results: list[ScannerResultItem] = []
+        avg_volume_by_symbol: dict[str, float | None] = {}
         try:
             data = yf_screen(query, count=count, sortField=sort_field, sortAsc=sort_asc)
             for q in data.get("quotes", []):
                 item = quote_to_item(q)
                 if item is not None:
                     results.append(item)
+                    avg_volume_by_symbol[item.symbol] = q.get("averageDailyVolume10Day")
+            if get_market_state() == "PRE":
+                self._enrich_premarket_charts_sync(results, avg_volume_by_symbol)
         except Exception as exc:
             logger.error("MarketDataSource fetch failed: %s", exc)
         return results
+
+    def _enrich_premarket_charts_sync(
+        self,
+        items: list[ScannerResultItem],
+        avg_volume_by_symbol: dict[str, float | None],
+    ) -> None:
+        """Fetch 1m pre/post chart data and update scanner items in place."""
+        if not items:
+            return
+
+        symbols = [item.symbol for item in items]
+        charts = self._fetch_intraday_charts_sync(symbols)
+        elapsed_minutes = _minutes_of_trading()
+        for item in items:
+            bars = charts.get(item.symbol)
+            if bars is None:
+                continue
+            apply_premarket_chart_metrics(
+                item,
+                bars,
+                avg_volume_by_symbol.get(item.symbol),
+                elapsed_minutes=elapsed_minutes,
+            )
+
+    def _fetch_intraday_charts_sync(self, symbols: list[str]) -> dict[str, pd.DataFrame]:
+        charts: dict[str, pd.DataFrame] = {}
+        for i in range(0, len(symbols), _CHART_BATCH_SIZE):
+            chunk = symbols[i:i + _CHART_BATCH_SIZE]
+            try:
+                data = yf.download(
+                    tickers=" ".join(chunk),
+                    period="1d",
+                    interval="1m",
+                    prepost=True,
+                    group_by="ticker",
+                    auto_adjust=False,
+                    progress=False,
+                    threads=True,
+                )
+            except Exception as exc:
+                logger.error("Intraday chart fetch failed for %s: %s", ",".join(chunk), exc)
+                continue
+
+            for symbol in chunk:
+                chart = self._extract_symbol_chart(data, symbol, single_symbol=len(chunk) == 1)
+                if chart is not None and not chart.empty:
+                    charts[symbol] = chart
+        return charts
+
+    @staticmethod
+    def _extract_symbol_chart(
+        data: pd.DataFrame,
+        symbol: str,
+        single_symbol: bool = False,
+    ) -> pd.DataFrame | None:
+        if data.empty:
+            return None
+        if not isinstance(data.columns, pd.MultiIndex):
+            return data
+        if symbol in data.columns.get_level_values(0):
+            return data[symbol]
+        if symbol in data.columns.get_level_values(-1):
+            return data.xs(symbol, axis=1, level=-1)
+        if single_symbol:
+            return data.droplevel(0, axis=1)
+        return None
 
     async def fetch(
         self,
