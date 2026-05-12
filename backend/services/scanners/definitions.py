@@ -51,7 +51,7 @@ class TopGainers(BaseScanner):
         # Fetch broadly by average volume; chart enrichment computes real pre-market
         # metrics, then premarket_post_filter keeps only active movers.
         return us_equity(
-            yf.EquityQuery("gt", ["averagedailyvol10d", 100_000]),
+            yf.EquityQuery("gt", ["avgdailyvol3m", 100_000]),
         )
 
 
@@ -70,7 +70,7 @@ class TopLosers(BaseScanner):
 
     def build_premarket_query(self):
         return us_equity(
-            yf.EquityQuery("gt", ["averagedailyvol10d", 100_000]),
+            yf.EquityQuery("gt", ["avgdailyvol3m", 100_000]),
         )
 
     def premarket_post_filter(self, items):
@@ -94,7 +94,7 @@ class TopGappers(BaseScanner):
 
     def build_premarket_query(self):
         return us_equity(
-            yf.EquityQuery("gt", ["averagedailyvol10d", 100_000]),
+            yf.EquityQuery("gt", ["avgdailyvol3m", 100_000]),
         )
 
 
@@ -111,7 +111,7 @@ class RunningUp(BaseScanner):
 
     def build_premarket_query(self):
         return us_equity(
-            yf.EquityQuery("gt", ["averagedailyvol10d", 500_000]),
+            yf.EquityQuery("gt", ["avgdailyvol3m", 500_000]),
         )
 
     def premarket_post_filter(self, items):
@@ -137,7 +137,7 @@ class RunningDown(BaseScanner):
 
     def build_premarket_query(self):
         return us_equity(
-            yf.EquityQuery("gt", ["averagedailyvol10d", 500_000]),
+            yf.EquityQuery("gt", ["avgdailyvol3m", 500_000]),
         )
 
     def premarket_post_filter(self, items):
@@ -164,7 +164,7 @@ class MostActive(BaseScanner):
 
     def build_premarket_query(self):
         return us_equity(
-            yf.EquityQuery("gt", ["averagedailyvol10d", 1_000_000]),
+            yf.EquityQuery("gt", ["avgdailyvol3m", 1_000_000]),
         )
 
 
@@ -337,7 +337,7 @@ class SmallCapGainers(BaseScanner):
     def build_premarket_query(self):
         return us_equity(
             yf.EquityQuery("lt", ["intradaymarketcap", 2_000_000_000]),
-            yf.EquityQuery("gt", ["averagedailyvol10d", 100_000]),
+            yf.EquityQuery("gt", ["avgdailyvol3m", 100_000]),
         )
 
 
@@ -356,7 +356,7 @@ class LowFloatGainers(BaseScanner):
     def build_premarket_query(self):
         return us_equity(
             yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
-            yf.EquityQuery("gt", ["averagedailyvol10d", 100_000]),
+            yf.EquityQuery("gt", ["avgdailyvol3m", 100_000]),
         )
 
 

@@ -46,7 +46,7 @@ class BaseScanner(ABC):
 
     def premarket_sort_field(self) -> str:
         """Sort field for pre-market screener query (must not be stale)."""
-        return "averagedailyvol10d"
+        return "avgdailyvol3m"
 
     def premarket_post_filter(self, items: list[ScannerResultItem]) -> list[ScannerResultItem]:
         """Filter after chart enrichment during pre-market.
