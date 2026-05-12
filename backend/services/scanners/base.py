@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import yfinance as yf
 
 from ...schemas import ScannerResultItem, ScannerPreset, ScannerResponse
-from ..market_data_source import MarketDataSource
+from ..market_data_source import MarketDataSource, get_market_state
 
 import time
 
@@ -38,6 +38,21 @@ class BaseScanner(ABC):
     def build_query(self) -> yf.EquityQuery:
         ...
 
+    def build_premarket_query(self) -> yf.EquityQuery | None:
+        """Return a broader query for pre-market hours, or None to use build_query().
+        During pre-market, Yahoo screener fields like percentchange and dayvolume
+        are stale (previous session's values), so queries must avoid them."""
+        return None
+
+    def premarket_sort_field(self) -> str:
+        """Sort field for pre-market screener query (must not be stale)."""
+        return "averagedailyvol10d"
+
+    def premarket_post_filter(self, items: list[ScannerResultItem]) -> list[ScannerResultItem]:
+        """Filter after chart enrichment during pre-market.
+        Only keep stocks with actual pre-market trading activity (volume > 0)."""
+        return [item for item in items if item.volume and item.volume > 0]
+
     def post_filter(self, items: list[ScannerResultItem]) -> list[ScannerResultItem]:
         return items
 
@@ -60,15 +75,28 @@ class BaseScanner(ABC):
     async def scan(self, data_source: MarketDataSource) -> ScannerResponse:
         start = time.time()
 
-        items = await data_source.fetch(
-            cache_key=self.id,
-            query=self.build_query(),
-            sort_field=self.sort_field,
-            sort_asc=self.sort_asc,
-            count=self.count,
-        )
+        is_premarket = get_market_state() == "PRE"
+        premarket_query = self.build_premarket_query() if is_premarket else None
 
-        items = self.post_filter(items)
+        if premarket_query is not None:
+            items = await data_source.fetch(
+                cache_key=f"{self.id}_pre",
+                query=premarket_query,
+                sort_field=self.premarket_sort_field(),
+                sort_asc=False,
+                count=self.count,
+            )
+            items = self.premarket_post_filter(items)
+        else:
+            items = await data_source.fetch(
+                cache_key=self.id,
+                query=self.build_query(),
+                sort_field=self.sort_field,
+                sort_asc=self.sort_asc,
+                count=self.count,
+            )
+            items = self.post_filter(items)
+
         items = await self.enrich(items, data_source)
 
         reverse = self.sort_dir == "desc"

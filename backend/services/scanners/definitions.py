@@ -46,6 +46,14 @@ class TopGainers(BaseScanner):
             yf.EquityQuery("gt", ["dayvolume", 100_000]),
         )
 
+    def build_premarket_query(self):
+        # During pre-market, percentchange and dayvolume are stale (yesterday's values).
+        # Fetch broadly by average volume; chart enrichment computes real pre-market
+        # metrics, then premarket_post_filter keeps only active movers.
+        return us_equity(
+            yf.EquityQuery("gt", ["averagedailyvol10d", 100_000]),
+        )
+
 
 class TopLosers(BaseScanner):
     id = "top_losers"
@@ -60,6 +68,18 @@ class TopLosers(BaseScanner):
             yf.EquityQuery("gt", ["dayvolume", 100_000]),
         )
 
+    def build_premarket_query(self):
+        return us_equity(
+            yf.EquityQuery("gt", ["averagedailyvol10d", 100_000]),
+        )
+
+    def premarket_post_filter(self, items):
+        return [
+            item for item in items
+            if item.volume and item.volume > 0
+            and item.change_from_close_pct is not None and item.change_from_close_pct < 0
+        ]
+
 
 class TopGappers(BaseScanner):
     id = "top_gappers"
@@ -70,6 +90,11 @@ class TopGappers(BaseScanner):
         return us_equity(
             yf.EquityQuery("gt", ["percentchange", 5]),
             yf.EquityQuery("gt", ["dayvolume", 100_000]),
+        )
+
+    def build_premarket_query(self):
+        return us_equity(
+            yf.EquityQuery("gt", ["averagedailyvol10d", 100_000]),
         )
 
 
@@ -83,6 +108,18 @@ class RunningUp(BaseScanner):
             yf.EquityQuery("gt", ["percentchange", 8]),
             yf.EquityQuery("gt", ["dayvolume", 500_000]),
         )
+
+    def build_premarket_query(self):
+        return us_equity(
+            yf.EquityQuery("gt", ["averagedailyvol10d", 500_000]),
+        )
+
+    def premarket_post_filter(self, items):
+        return [
+            item for item in items
+            if item.volume and item.volume > 0
+            and item.change_from_close_pct is not None and item.change_from_close_pct >= 8
+        ]
 
 
 class RunningDown(BaseScanner):
@@ -98,6 +135,18 @@ class RunningDown(BaseScanner):
             yf.EquityQuery("gt", ["dayvolume", 500_000]),
         )
 
+    def build_premarket_query(self):
+        return us_equity(
+            yf.EquityQuery("gt", ["averagedailyvol10d", 500_000]),
+        )
+
+    def premarket_post_filter(self, items):
+        return [
+            item for item in items
+            if item.volume and item.volume > 0
+            and item.change_from_close_pct is not None and item.change_from_close_pct < -5
+        ]
+
 
 # ── Volume ───────────────────────────────────────────────────────────────────
 
@@ -111,6 +160,11 @@ class MostActive(BaseScanner):
     def build_query(self):
         return us_equity(
             yf.EquityQuery("gt", ["dayvolume", 5_000_000]),
+        )
+
+    def build_premarket_query(self):
+        return us_equity(
+            yf.EquityQuery("gt", ["averagedailyvol10d", 1_000_000]),
         )
 
 
@@ -165,11 +219,26 @@ class Ross5Pillars(BaseScanner):
             yf.EquityQuery("gt", ["dayvolume", 500_000]),
         )
 
+    def build_premarket_query(self):
+        # During pre-market, percentchange and dayvolume are stale.
+        # Keep stable filters (price range, float), drop stale ones.
+        return us_equity(
+            yf.EquityQuery("btwn", ["intradayprice", 2, 20]),
+            yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
+        )
+
     def post_filter(self, items):
         return [
             item for item in items
             if item.relative_volume_daily and item.relative_volume_daily >= 5  # Pillar 2: RelVol >= 5x
             and item.change_from_close_pct is not None and item.change_from_close_pct >= 4  # Pillar 3: Change >= 4%
+        ]
+
+    def premarket_post_filter(self, items):
+        return [
+            item for item in items
+            if item.volume and item.volume > 0
+            and item.change_from_close_pct is not None and item.change_from_close_pct >= 4
         ]
 
 
@@ -265,6 +334,12 @@ class SmallCapGainers(BaseScanner):
             yf.EquityQuery("gt", ["dayvolume", 100_000]),
         )
 
+    def build_premarket_query(self):
+        return us_equity(
+            yf.EquityQuery("lt", ["intradaymarketcap", 2_000_000_000]),
+            yf.EquityQuery("gt", ["averagedailyvol10d", 100_000]),
+        )
+
 
 class LowFloatGainers(BaseScanner):
     id = "low_float_gainers"
@@ -276,6 +351,12 @@ class LowFloatGainers(BaseScanner):
             yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
             yf.EquityQuery("gt", ["percentchange", 5]),
             yf.EquityQuery("gt", ["dayvolume", 200_000]),
+        )
+
+    def build_premarket_query(self):
+        return us_equity(
+            yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
+            yf.EquityQuery("gt", ["averagedailyvol10d", 100_000]),
         )
 
 

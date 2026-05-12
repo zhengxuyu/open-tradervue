@@ -173,10 +173,11 @@ def quote_to_item(q: dict) -> Optional[ScannerResultItem]:
     avg_vol_10d = q.get("averageDailyVolume10Day")
 
     # During pre-market, regularMarket* fields are stale (previous session).
-    # Compute metrics from pre-market price vs prev_close instead.
-    if market_state == "PRE" and prev_close and prev_close > 0:
-        change_pct = (price - prev_close) / prev_close * 100
-        volume = q.get("preMarketVolume") or 0
+    # Set initial values from pre-market price; chart enrichment will overwrite
+    # with accurate 1m bar data for stocks with actual pre-market activity.
+    if market_state == "PRE":
+        change_pct = ((price - prev_close) / prev_close * 100) if prev_close and prev_close > 0 else None
+        volume = 0  # will be set by chart enrichment from actual bars
         day_high = price
         day_low = price
         open_price = price
