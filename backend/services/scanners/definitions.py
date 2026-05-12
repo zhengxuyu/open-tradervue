@@ -61,6 +61,7 @@ class TopLosers(BaseScanner):
     description = "Stocks with the biggest % loss today"
     sort_asc = True
     sort_dir = "asc"
+    polygon_direction = "losers"
 
     def build_query(self):
         return us_equity(
@@ -127,6 +128,7 @@ class RunningDown(BaseScanner):
     name = "Running Down"
     description = "Stocks selling off heavily (< -5%)"
     sort_asc = True
+    polygon_direction = "losers"
     sort_dir = "asc"
 
     def build_query(self):
@@ -156,6 +158,7 @@ class MostActive(BaseScanner):
     description = "Highest trading volume today"
     sort_field = "dayvolume"
     sort_by = "volume"
+    polygon_direction = None
 
     def build_query(self):
         return us_equity(
@@ -175,6 +178,7 @@ class TopVolume5Min(BaseScanner):
     sort_field = "dayvolume"
     sort_by = "relative_volume_5min"
     sort_dir = "desc"
+    polygon_direction = None
 
     def build_query(self):
         return us_equity(
@@ -193,6 +197,7 @@ class TopRelativeVolume(BaseScanner):
     description = "Stocks with unusually high volume vs 3-month average"
     sort_field = "dayvolume"
     sort_by = "relative_volume_daily"
+    polygon_direction = None
 
     def build_query(self):
         return us_equity(
@@ -207,6 +212,7 @@ class Ross5Pillars(BaseScanner):
     id = "ross_5_pillars"
     name = "Ross's 5 Pillars"
     description = "Float < 20M, RelVol(5min) >= 5x, Change >= 4%, Price $2-$20"
+    polygon_direction = None
     count = 200  # wide net, filter in post_filter
 
     def build_query(self):
@@ -393,6 +399,7 @@ class LargeCapVolume(BaseScanner):
     description = "Large cap stocks with highest volume today"
     sort_field = "dayvolume"
     sort_by = "volume"
+    polygon_direction = None
 
     def build_query(self):
         return us_equity(
@@ -422,6 +429,7 @@ class PennyLosers(BaseScanner):
     description = "Penny stocks ($0.50-$5) with biggest losses"
     sort_asc = True
     sort_dir = "asc"
+    polygon_direction = "losers"
 
     def build_query(self):
         return us_equity(
@@ -440,6 +448,7 @@ class AfterHoursTopGainers(BaseScanner):
     sort_by = "change_from_regular_close_pct"
     sort_dir = "desc"
     count = 200  # wide net to catch AH movers
+    polygon_direction = None
 
     def build_query(self):
         # Cast widest net: any US stock with some volume, sorted by change
@@ -463,6 +472,7 @@ class HighShortInterest(BaseScanner):
     name = "High Short Interest"
     description = "Stocks with > 15% short float (squeeze candidates)"
     sort_field = "short_percentage_of_float.value"
+    polygon_direction = None
 
     def build_query(self):
         return us_equity(
@@ -476,6 +486,7 @@ class MostShorted(BaseScanner):
     name = "Most Shorted"
     description = "Stocks with highest short interest ratio"
     sort_field = "short_interest.value"
+    polygon_direction = None
 
     def build_query(self):
         return us_equity(
