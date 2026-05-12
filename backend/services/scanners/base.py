@@ -7,6 +7,7 @@ import yfinance as yf
 
 from ...schemas import ScannerResultItem, ScannerPreset, ScannerResponse
 from ..market_data_source import MarketDataSource, get_market_state
+from ..polygon import PolygonDataSource, polygon_available
 
 import time
 
@@ -33,6 +34,8 @@ class BaseScanner(ABC):
     sort_by: str = "change_from_close_pct"
     sort_dir: str = "desc"
     count: int = 200
+    # Polygon snapshot direction for pre-market: "gainers", "losers", or None
+    polygon_direction: str | None = "gainers"
 
     @abstractmethod
     def build_query(self) -> yf.EquityQuery:
@@ -76,12 +79,21 @@ class BaseScanner(ABC):
         start = time.time()
 
         is_premarket = get_market_state() == "PRE"
-        premarket_query = self.build_premarket_query() if is_premarket else None
+        items: list[ScannerResultItem] = []
 
-        if premarket_query is not None:
+        # Pre-market: use Polygon snapshot (real-time pre-market data)
+        if is_premarket and self.polygon_direction and polygon_available():
+            polygon = data_source.polygon
+            if self.polygon_direction == "gainers":
+                items = await polygon.fetch_gainers()
+            elif self.polygon_direction == "losers":
+                items = await polygon.fetch_losers()
+            items = self.premarket_post_filter(items)
+        elif is_premarket and self.build_premarket_query() is not None:
+            # Fallback: Yahoo with broader query + chart enrichment
             items = await data_source.fetch(
                 cache_key=f"{self.id}_pre",
-                query=premarket_query,
+                query=self.build_premarket_query(),
                 sort_field=self.premarket_sort_field(),
                 sort_asc=False,
                 count=self.count,
