@@ -73,7 +73,8 @@ def test_apply_premarket_chart_metrics_keeps_item_when_no_premarket_bars():
 
 def test_quote_to_item_premarket_uses_premarket_price_for_change():
     """During pre-market, chg% should be computed from preMarketPrice vs prev_close,
-    not from stale regularMarketChangePercent (which is yesterday's value)."""
+    not from stale regularMarketChangePercent (which is yesterday's value).
+    Volume is 0 initially — chart enrichment fills it from actual 1m bars."""
     quote = {
         "symbol": "TEST",
         "marketState": "PRE",
@@ -85,7 +86,6 @@ def test_quote_to_item_premarket_uses_premarket_price_for_change():
         "regularMarketDayLow": 9.80,  # stale
         "regularMarketOpen": 10.10,  # stale
         "regularMarketVolume": 1_000_000,  # stale
-        "preMarketVolume": 50_000,
         "averageDailyVolume10Day": 500_000,
         "sharesOutstanding": 10_000_000,
         "marketCap": 120_000_000,
@@ -97,8 +97,8 @@ def test_quote_to_item_premarket_uses_premarket_price_for_change():
     assert item.change_from_close_pct == 20.0
     # HOD should be pre-market price, not stale 10.50
     assert item.day_high == 12.00
-    # Volume should be pre-market volume, not stale 1M
-    assert item.volume == 50_000
+    # Volume starts at 0 — chart enrichment fills actual pre-market volume
+    assert item.volume == 0
     # gap_pct should match change_from_close_pct during pre-market
     assert item.gap_pct == 20.0
 
@@ -126,6 +126,76 @@ def test_quote_to_item_regular_market_unchanged():
     assert item.day_high == 10.80
     assert item.day_low == 9.90
     assert item.volume == 1_000_000
+
+
+def test_premarket_chart_enrichment_sets_volume_from_bars():
+    """Chart enrichment should set volume from actual pre-market bars,
+    replacing the initial volume=0 from quote_to_item during PRE."""
+    item = ScannerResultItem(
+        symbol="BZFD",
+        price=1.40,
+        change_from_close_pct=20.0,
+        volume=0,  # initial value from quote_to_item during PRE
+        day_high=1.40,
+        day_low=1.40,
+        prev_close=0.75,
+    )
+    bars = pd.DataFrame(
+        {
+            "Open": [0.80, 1.00, 1.30],
+            "High": [1.00, 1.35, 1.45],
+            "Low": [0.78, 0.95, 1.25],
+            "Close": [0.95, 1.30, 1.40],
+            "Volume": [500_000, 3_000_000, 2_000_000],
+        },
+        index=pd.DatetimeIndex(
+            [
+                datetime(2026, 5, 12, 4, 0),
+                datetime(2026, 5, 12, 5, 30),
+                datetime(2026, 5, 12, 6, 0),
+            ],
+            tz="America/New_York",
+        ),
+    )
+
+    updated = apply_premarket_chart_metrics(item, bars, avg_volume_10d=1_000_000, elapsed_minutes=120)
+
+    # Volume should be sum of all pre-market bars
+    assert updated.volume == 5_500_000
+    # Price from latest bar
+    assert updated.price == 1.40
+    # HOD from max of all bars
+    assert updated.day_high == 1.45
+    # Change from prev_close
+    assert updated.change_from_close_pct == 86.67  # (1.40 - 0.75) / 0.75 * 100
+
+
+def test_premarket_items_without_chart_bars_have_zero_volume():
+    """Stocks without actual pre-market trading keep volume=0,
+    so premarket_post_filter can exclude them."""
+    item = ScannerResultItem(
+        symbol="STALE",
+        price=5.00,
+        change_from_close_pct=10.0,
+        volume=0,
+        prev_close=4.55,
+    )
+    # Bars from regular hours only (9:30+), no pre-market bars
+    bars = pd.DataFrame(
+        {
+            "Open": [5.10],
+            "High": [5.30],
+            "Low": [5.05],
+            "Close": [5.20],
+            "Volume": [100_000],
+        },
+        index=pd.DatetimeIndex([datetime(2026, 5, 12, 9, 30)], tz="America/New_York"),
+    )
+
+    updated = apply_premarket_chart_metrics(item, bars, avg_volume_10d=500_000, elapsed_minutes=10)
+
+    # No pre-market bars → item unchanged, volume stays 0
+    assert updated.volume == 0
 
 
 def test_extract_symbol_chart_from_yfinance_multi_ticker_download():
