@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 
 from backend.schemas import ScannerResultItem
-from backend.services.market_data_source import MarketDataSource, apply_premarket_chart_metrics
+from backend.services.market_data_source import MarketDataSource, apply_premarket_chart_metrics, quote_to_item
 
 
 def test_apply_premarket_chart_metrics_uses_1m_chart_data():
@@ -69,6 +69,63 @@ def test_apply_premarket_chart_metrics_keeps_item_when_no_premarket_bars():
     updated = apply_premarket_chart_metrics(item, bars, avg_volume_10d=100_000, elapsed_minutes=10)
 
     assert updated == item
+
+
+def test_quote_to_item_premarket_uses_premarket_price_for_change():
+    """During pre-market, chg% should be computed from preMarketPrice vs prev_close,
+    not from stale regularMarketChangePercent (which is yesterday's value)."""
+    quote = {
+        "symbol": "TEST",
+        "marketState": "PRE",
+        "preMarketPrice": 12.00,
+        "regularMarketPrice": 10.00,
+        "regularMarketPreviousClose": 10.00,
+        "regularMarketChangePercent": 5.0,  # stale — yesterday's change
+        "regularMarketDayHigh": 10.50,  # stale
+        "regularMarketDayLow": 9.80,  # stale
+        "regularMarketOpen": 10.10,  # stale
+        "regularMarketVolume": 1_000_000,  # stale
+        "preMarketVolume": 50_000,
+        "averageDailyVolume10Day": 500_000,
+        "sharesOutstanding": 10_000_000,
+        "marketCap": 120_000_000,
+    }
+    item = quote_to_item(quote)
+    assert item is not None
+    assert item.price == 12.00
+    # chg% should be (12 - 10) / 10 * 100 = 20%, NOT stale 5%
+    assert item.change_from_close_pct == 20.0
+    # HOD should be pre-market price, not stale 10.50
+    assert item.day_high == 12.00
+    # Volume should be pre-market volume, not stale 1M
+    assert item.volume == 50_000
+    # gap_pct should match change_from_close_pct during pre-market
+    assert item.gap_pct == 20.0
+
+
+def test_quote_to_item_regular_market_unchanged():
+    """During regular hours, behavior should be the same as before."""
+    quote = {
+        "symbol": "TEST",
+        "marketState": "REGULAR",
+        "regularMarketPrice": 10.50,
+        "regularMarketPreviousClose": 10.00,
+        "regularMarketChangePercent": 5.0,
+        "regularMarketDayHigh": 10.80,
+        "regularMarketDayLow": 9.90,
+        "regularMarketOpen": 10.10,
+        "regularMarketVolume": 1_000_000,
+        "averageDailyVolume10Day": 500_000,
+        "sharesOutstanding": 10_000_000,
+        "marketCap": 105_000_000,
+    }
+    item = quote_to_item(quote)
+    assert item is not None
+    assert item.price == 10.50
+    assert item.change_from_close_pct == 5.0
+    assert item.day_high == 10.80
+    assert item.day_low == 9.90
+    assert item.volume == 1_000_000
 
 
 def test_extract_symbol_chart_from_yfinance_multi_ticker_download():

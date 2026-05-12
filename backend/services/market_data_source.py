@@ -166,18 +166,26 @@ def quote_to_item(q: dict) -> Optional[ScannerResultItem]:
     else:
         price = q.get("regularMarketPrice")
 
-    # Change %: always use regular market change (intraday), matching Warrior Trading
-    change_pct = q.get("regularMarketChangePercent")
-
     if price is None:
         return None
 
-    volume = q.get("regularMarketVolume")
-    avg_vol_10d = q.get("averageDailyVolume10Day")
-    day_high = q.get("regularMarketDayHigh")
-    day_low = q.get("regularMarketDayLow")
-    open_price = q.get("regularMarketOpen")
     prev_close = q.get("regularMarketPreviousClose")
+    avg_vol_10d = q.get("averageDailyVolume10Day")
+
+    # During pre-market, regularMarket* fields are stale (previous session).
+    # Compute metrics from pre-market price vs prev_close instead.
+    if market_state == "PRE" and prev_close and prev_close > 0:
+        change_pct = (price - prev_close) / prev_close * 100
+        volume = q.get("preMarketVolume") or 0
+        day_high = price
+        day_low = price
+        open_price = price
+    else:
+        change_pct = q.get("regularMarketChangePercent")
+        volume = q.get("regularMarketVolume")
+        day_high = q.get("regularMarketDayHigh")
+        day_low = q.get("regularMarketDayLow")
+        open_price = q.get("regularMarketOpen")
 
     rvol = round(volume / avg_vol_10d, 2) if volume and avg_vol_10d and avg_vol_10d > 0 else None
 
@@ -190,7 +198,7 @@ def quote_to_item(q: dict) -> Optional[ScannerResultItem]:
         if rate_avg > 0:
             rvol_5min = round(rate_now / rate_avg, 2)
 
-    gap = round((open_price - prev_close) / prev_close * 100, 2) if open_price and prev_close and prev_close > 0 else None
+    gap = round((price - prev_close) / prev_close * 100, 2) if market_state == "PRE" and prev_close and prev_close > 0 else (round((open_price - prev_close) / prev_close * 100, 2) if open_price and prev_close and prev_close > 0 else None)
     pos_range = round((price - day_low) / (day_high - day_low) * 100, 2) if price and day_high and day_low and (day_high - day_low) > 0 else None
     post_chg = q.get("postMarketChangePercent")
 
@@ -245,10 +253,15 @@ class MarketDataSource:
                 if item is not None:
                     results.append(item)
                     avg_volume_by_symbol[item.symbol] = q.get("averageDailyVolume10Day")
-            if get_market_state() == "PRE":
-                self._enrich_premarket_charts_sync(results, avg_volume_by_symbol)
         except Exception as exc:
             logger.error("MarketDataSource fetch failed: %s", exc)
+            return results
+
+        if get_market_state() == "PRE" and results:
+            try:
+                self._enrich_premarket_charts_sync(results, avg_volume_by_symbol)
+            except Exception as exc:
+                logger.warning("Pre-market chart enrichment failed: %s", exc)
         return results
 
     def _enrich_premarket_charts_sync(
