@@ -231,8 +231,6 @@ class MarketDataSource:
         self._cache: dict[str, tuple[list[ScannerResultItem], datetime]] = {}
         self._cache_ttl = timedelta(seconds=cache_ttl_seconds)
         self._news_cache: dict[str, tuple[dict[str, bool], datetime]] = {}
-        from .polygon import PolygonDataSource
-        self.polygon = PolygonDataSource()
 
     def _is_cache_valid(self, key: str) -> bool:
         if key not in self._cache:
@@ -380,7 +378,12 @@ class MarketDataSource:
         """Async wrapper for news check. Cached for 5 minutes."""
         if not symbols:
             return {}
-        cache_key = f"news_{hours}h_{'_'.join(sorted(symbols[:10]))}"
+        # Hash the full sorted symbol list — truncating to 10 caused cache
+        # collisions across scans that shared their first 10 symbols but
+        # differed past index 10, returning the wrong news map.
+        import hashlib
+        symbols_key = hashlib.sha1(",".join(sorted(symbols)).encode()).hexdigest()[:16]
+        cache_key = f"news_{hours}h_{symbols_key}"
         if cache_key in self._news_cache:
             result, cached_at = self._news_cache[cache_key]
             if datetime.now() < cached_at + timedelta(minutes=5):
