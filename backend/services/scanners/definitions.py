@@ -18,48 +18,52 @@ from ..market_data_source import us_equity
 class TopGainers(BaseScanner):
     id = "top_gainers"
     name = "Top Gainers"
-    description = "Float <= 20M, change >= 30% vs prev close, price $1.50-$20"
-    count = 1000  # wider candidate net — strict 30% chg + $1.50-$20 + float<20M
+    description = "Real float <= 20M, change >= 30% vs prev close, price $1.50-$20"
+    count = 1000
+    # Resolve Yahoo's real `floatShares` per candidate before post_filter —
+    # Yahoo screener can only filter on `totalsharesoutstanding`, which over-
+    # excludes stocks like TDIC (27M shares outstanding, 6M actual float).
+    needs_float = True
+
+    # Coarse safety bound at the query level: any stock with shares_outstanding
+    # above this almost certainly has float > 20M too. The exact float <= 20M
+    # check runs in post_filter using real floatShares from Ticker.info.
+    _SHARES_OUTSTANDING_BOUND = 50_000_000
 
     def build_query(self):
-        # Use a lower percentchange threshold in the query and enforce >= 30
-        # in post_filter, because Yahoo's percentchange can include extended-
-        # hours moves. The exact-30 check runs against change_from_close_pct
-        # which we compute from regularMarketPreviousClose.
         return us_equity(
-            yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
+            yf.EquityQuery("lt", ["totalsharesoutstanding", self._SHARES_OUTSTANDING_BOUND]),
             yf.EquityQuery("btwn", ["intradayprice", 1.5, 20]),
             yf.EquityQuery("gt", ["percentchange", 25]),
         )
 
     def build_premarket_query(self):
         # percentchange and intradayprice are stale during pre-market (they
-        # reflect yesterday's close-to-close). Keep only the float filter at
-        # the query level; chart enrichment then writes the live pre-market
-        # price + change% and premarket_post_filter applies the real cutoffs.
+        # reflect the last regular session). Keep only the coarse shares-
+        # outstanding bound at the query level; chart enrichment writes the
+        # live pre-market price + chg% and premarket_post_filter applies
+        # the real cutoffs (including float <= 20M from enrich_floats).
         return us_equity(
-            yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
+            yf.EquityQuery("lt", ["totalsharesoutstanding", self._SHARES_OUTSTANDING_BOUND]),
+        )
+
+    def _passes(self, item):
+        return (
+            item.change_from_close_pct is not None and item.change_from_close_pct >= 30
+            and item.price is not None and 1.5 <= item.price <= 20
+            and item.float_shares is not None and item.float_shares <= 20_000_000
         )
 
     def post_filter(self, items):
-        return [
-            item for item in items
-            if item.change_from_close_pct is not None and item.change_from_close_pct >= 30
-            and item.price is not None and 1.5 <= item.price <= 20
-        ]
+        return [item for item in items if self._passes(item)]
 
     def premarket_post_filter(self, items):
-        # NOTE: deliberately no `volume > 0` check. Yahoo's 1m chart
-        # aggregation lags for low-volume small-caps in early pre-market,
-        # so chart-derived volume can be 0 even when there ARE real
-        # pre-market trades (Yahoo's quote shows preMarketPrice and
-        # preMarketTime in that case). The chg >= 30% gate already
-        # rules out stale data.
-        return [
-            item for item in items
-            if item.change_from_close_pct is not None and item.change_from_close_pct >= 30
-            and item.price is not None and 1.5 <= item.price <= 20
-        ]
+        # No `volume > 0` check. Yahoo's 1m chart aggregation lags for
+        # low-volume small-caps in early pre-market, so chart-derived volume
+        # can be 0 even when there are real pre-market trades (Yahoo's quote
+        # shows preMarketPrice and preMarketTime). chg >= 30% rules out stale
+        # data; float <= 20M comes from enrich_floats (real floatShares).
+        return [item for item in items if self._passes(item)]
 
 
 class TopLosers(BaseScanner):
