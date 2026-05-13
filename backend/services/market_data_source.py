@@ -118,7 +118,9 @@ def apply_premarket_chart_metrics(
 
 logger = logging.getLogger("daytradedash.datasource")
 
-# Major US exchanges (exclude OTC/Pink Sheets)
+# Major US exchanges (exclude OTC tiers PNK/OQB/OQX and ambiguous YHD/OEM).
+# NMS=Nasdaq Global Select, NGM=Nasdaq Global, NCM=Nasdaq Capital,
+# NYQ=NYSE, ASE=NYSE American, PCX=NYSE Arca, BTS=CBOE BZX (legacy BATS).
 US_EXCHANGES = yf.EquityQuery("or", [
     yf.EquityQuery("eq", ["exchange", "NMS"]),
     yf.EquityQuery("eq", ["exchange", "NYQ"]),
@@ -126,6 +128,7 @@ US_EXCHANGES = yf.EquityQuery("or", [
     yf.EquityQuery("eq", ["exchange", "NCM"]),
     yf.EquityQuery("eq", ["exchange", "ASE"]),
     yf.EquityQuery("eq", ["exchange", "PCX"]),
+    yf.EquityQuery("eq", ["exchange", "BTS"]),
 ])
 
 US_REGION = yf.EquityQuery("eq", ["region", "us"])
