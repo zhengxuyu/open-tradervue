@@ -1,17 +1,17 @@
 """Base scanner classes — all scanners inherit from these."""
 
+import time
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import yfinance as yf
 
 from ...schemas import ScannerResultItem, ScannerPreset, ScannerResponse
 from ..market_data_source import MarketDataSource, get_market_state
-from ..polygon import PolygonDataSource, polygon_available
 
-import time
-
-_ET = timezone(timedelta(hours=-4))
+# Use ZoneInfo so DST transitions (EDT/EST) are handled correctly.
+_ET = ZoneInfo("America/New_York")
 
 
 class BaseScanner(ABC):
@@ -34,8 +34,6 @@ class BaseScanner(ABC):
     sort_by: str = "change_from_close_pct"
     sort_dir: str = "desc"
     count: int = 200
-    # Polygon snapshot direction for pre-market: "gainers", "losers", or None
-    polygon_direction: str | None = "gainers"
 
     @abstractmethod
     def build_query(self) -> yf.EquityQuery:
@@ -81,16 +79,10 @@ class BaseScanner(ABC):
         is_premarket = get_market_state() == "PRE"
         items: list[ScannerResultItem] = []
 
-        # Pre-market: use Polygon snapshot (real-time pre-market data)
-        if is_premarket and self.polygon_direction and polygon_available():
-            polygon = data_source.polygon
-            if self.polygon_direction == "gainers":
-                items = await polygon.fetch_gainers()
-            elif self.polygon_direction == "losers":
-                items = await polygon.fetch_losers()
-            items = self.premarket_post_filter(items)
-        elif is_premarket and self.build_premarket_query() is not None:
-            # Fallback: Yahoo with broader query + chart enrichment
+        if is_premarket and self.build_premarket_query() is not None:
+            # Yahoo screener sorted by avg volume + 1m chart enrichment computes
+            # real pre-market change%, volume, HOD. Yahoo's regular* fields are
+            # stale during pre-market, so we cannot sort/filter on them directly.
             items = await data_source.fetch(
                 cache_key=f"{self.id}_pre",
                 query=self.build_premarket_query(),
