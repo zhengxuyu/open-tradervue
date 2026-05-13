@@ -118,7 +118,9 @@ def apply_premarket_chart_metrics(
 
 logger = logging.getLogger("daytradedash.datasource")
 
-# Major US exchanges (exclude OTC/Pink Sheets)
+# Major US exchanges (exclude OTC tiers PNK/OQB/OQX and ambiguous YHD/OEM).
+# NMS=Nasdaq Global Select, NGM=Nasdaq Global, NCM=Nasdaq Capital,
+# NYQ=NYSE, ASE=NYSE American, PCX=NYSE Arca, BTS=CBOE BZX (legacy BATS).
 US_EXCHANGES = yf.EquityQuery("or", [
     yf.EquityQuery("eq", ["exchange", "NMS"]),
     yf.EquityQuery("eq", ["exchange", "NYQ"]),
@@ -126,6 +128,7 @@ US_EXCHANGES = yf.EquityQuery("or", [
     yf.EquityQuery("eq", ["exchange", "NCM"]),
     yf.EquityQuery("eq", ["exchange", "ASE"]),
     yf.EquityQuery("eq", ["exchange", "PCX"]),
+    yf.EquityQuery("eq", ["exchange", "BTS"]),
 ])
 
 US_REGION = yf.EquityQuery("eq", ["region", "us"])
@@ -247,13 +250,30 @@ class MarketDataSource:
     ) -> list[ScannerResultItem]:
         results: list[ScannerResultItem] = []
         avg_volume_by_symbol: dict[str, float | None] = {}
+        # Yahoo screener caps a single call at 250 rows. Page through with
+        # offset when callers want more — yfinance itself does not paginate.
+        _YAHOO_PAGE_SIZE = 250
         try:
-            data = yf_screen(query, count=count, sortField=sort_field, sortAsc=sort_asc)
-            for q in data.get("quotes", []):
-                item = quote_to_item(q)
-                if item is not None:
-                    results.append(item)
-                    avg_volume_by_symbol[item.symbol] = q.get("averageDailyVolume10Day")
+            offset = 0
+            while offset < count:
+                page_count = min(_YAHOO_PAGE_SIZE, count - offset)
+                data = yf_screen(
+                    query,
+                    offset=offset,
+                    count=page_count,
+                    sortField=sort_field,
+                    sortAsc=sort_asc,
+                )
+                quotes = data.get("quotes", []) or []
+                for q in quotes:
+                    item = quote_to_item(q)
+                    if item is not None:
+                        results.append(item)
+                        avg_volume_by_symbol[item.symbol] = q.get("averageDailyVolume10Day")
+                # Short page means Yahoo has no more rows for this query.
+                if len(quotes) < page_count:
+                    break
+                offset += page_count
         except Exception as exc:
             logger.error("MarketDataSource fetch failed: %s", exc)
             return results
