@@ -18,21 +18,42 @@ from ..market_data_source import us_equity
 class TopGainers(BaseScanner):
     id = "top_gainers"
     name = "Top Gainers"
-    description = "Stocks with the highest % gain today"
+    description = "Float <= 20M, change >= 30% vs prev close, price $1.50-$20"
 
     def build_query(self):
+        # Use a lower percentchange threshold in the query and enforce >= 30
+        # in post_filter, because Yahoo's percentchange can include extended-
+        # hours moves. The exact-30 check runs against change_from_close_pct
+        # which we compute from regularMarketPreviousClose.
         return us_equity(
-            yf.EquityQuery("gt", ["percentchange", 5]),
-            yf.EquityQuery("gt", ["dayvolume", 100_000]),
+            yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
+            yf.EquityQuery("btwn", ["intradayprice", 1.5, 20]),
+            yf.EquityQuery("gt", ["percentchange", 25]),
         )
 
     def build_premarket_query(self):
-        # During pre-market, percentchange and dayvolume are stale (yesterday's values).
-        # Fetch broadly by average volume; chart enrichment computes real pre-market
-        # metrics, then premarket_post_filter keeps only active movers.
+        # percentchange and intradayprice are stale during pre-market (they
+        # reflect yesterday's close-to-close). Keep only the float filter at
+        # the query level; chart enrichment then writes the live pre-market
+        # price + change% and premarket_post_filter applies the real cutoffs.
         return us_equity(
-            yf.EquityQuery("gt", ["avgdailyvol3m", 100_000]),
+            yf.EquityQuery("lt", ["totalsharesoutstanding", 20_000_000]),
         )
+
+    def post_filter(self, items):
+        return [
+            item for item in items
+            if item.change_from_close_pct is not None and item.change_from_close_pct >= 30
+            and item.price is not None and 1.5 <= item.price <= 20
+        ]
+
+    def premarket_post_filter(self, items):
+        return [
+            item for item in items
+            if item.volume and item.volume > 0
+            and item.change_from_close_pct is not None and item.change_from_close_pct >= 30
+            and item.price is not None and 1.5 <= item.price <= 20
+        ]
 
 
 class TopLosers(BaseScanner):
