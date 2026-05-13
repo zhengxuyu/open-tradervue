@@ -49,10 +49,15 @@ class TopGainers(BaseScanner):
         ]
 
     def premarket_post_filter(self, items):
+        # NOTE: deliberately no `volume > 0` check. Yahoo's 1m chart
+        # aggregation lags for low-volume small-caps in early pre-market,
+        # so chart-derived volume can be 0 even when there ARE real
+        # pre-market trades (Yahoo's quote shows preMarketPrice and
+        # preMarketTime in that case). The chg >= 30% gate already
+        # rules out stale data.
         return [
             item for item in items
-            if item.volume and item.volume > 0
-            and item.change_from_close_pct is not None and item.change_from_close_pct >= 30
+            if item.change_from_close_pct is not None and item.change_from_close_pct >= 30
             and item.price is not None and 1.5 <= item.price <= 20
         ]
 
