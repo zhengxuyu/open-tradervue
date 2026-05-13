@@ -19,6 +19,7 @@ class TopGainers(BaseScanner):
     id = "top_gainers"
     name = "Top Gainers"
     description = "Float <= 20M, change >= 30% vs prev close, price $1.50-$20"
+    count = 1000  # wider candidate net — strict 30% chg + $1.50-$20 + float<20M
 
     def build_query(self):
         # Use a lower percentchange threshold in the query and enforce >= 30
