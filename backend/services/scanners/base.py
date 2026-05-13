@@ -34,6 +34,10 @@ class BaseScanner(ABC):
     sort_by: str = "change_from_close_pct"
     sort_dir: str = "desc"
     count: int = 200
+    # When True, scan() resolves Yahoo's real floatShares per candidate before
+    # post_filter runs. Costs one Ticker.info HTTP per uncached symbol; values
+    # cache for 24h.
+    needs_float: bool = False
 
     @abstractmethod
     def build_query(self) -> yf.EquityQuery:
@@ -90,6 +94,8 @@ class BaseScanner(ABC):
                 sort_asc=False,
                 count=self.count,
             )
+            if self.needs_float:
+                await data_source.enrich_floats(items)
             items = self.premarket_post_filter(items)
         else:
             items = await data_source.fetch(
@@ -99,6 +105,8 @@ class BaseScanner(ABC):
                 sort_asc=self.sort_asc,
                 count=self.count,
             )
+            if self.needs_float:
+                await data_source.enrich_floats(items)
             items = self.post_filter(items)
 
         items = await self.enrich(items, data_source)

@@ -103,6 +103,28 @@ def test_quote_to_item_premarket_uses_premarket_price_for_change():
     assert item.gap_pct == 20.0
 
 
+def test_quote_to_item_premarket_chg_baseline_is_regularmarketprice():
+    """During PRE state, change% must be vs regularMarketPrice (yesterday's
+    close), NOT regularMarketPreviousClose (two days ago). Yahoo's own
+    preMarketChangePercent field uses regularMarketPrice as baseline; we
+    match that semantics so chg displayed matches Yahoo's quote."""
+    quote = {
+        "symbol": "TEST",
+        "marketState": "PRE",
+        "preMarketPrice": 2.00,
+        "regularMarketPrice": 1.50,            # yesterday's close
+        "regularMarketPreviousClose": 1.00,    # day-before-yesterday's close
+        "averageDailyVolume10Day": 500_000,
+        "sharesOutstanding": 10_000_000,
+    }
+    item = quote_to_item(quote)
+    assert item is not None
+    # Correct: (2.00 - 1.50) / 1.50 * 100 = 33.33%
+    # Wrong (old behavior): (2.00 - 1.00) / 1.00 * 100 = 100.00%
+    assert item.change_from_close_pct == 33.33
+    assert item.prev_close == 1.50
+
+
 def test_quote_to_item_regular_market_unchanged():
     """During regular hours, behavior should be the same as before."""
     quote = {

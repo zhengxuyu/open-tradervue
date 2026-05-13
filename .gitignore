@@ -212,3 +212,4 @@ tradervue.dbstitch-prompt.md
 dash/dist/
 .playwright-mcp/
 .claude/skills/
+uv.lock
