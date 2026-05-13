@@ -172,7 +172,16 @@ def quote_to_item(q: dict) -> Optional[ScannerResultItem]:
     if price is None:
         return None
 
-    prev_close = q.get("regularMarketPreviousClose")
+    # Pick the right "previous close" baseline. During PRE,
+    # regularMarketPrice IS yesterday's close (most recent completed regular
+    # session); regularMarketPreviousClose is the close BEFORE that (two
+    # days ago). Yahoo's own preMarketChangePercent field uses
+    # regularMarketPrice as the baseline, so we follow suit for consistency
+    # with the user-visible chg displayed in pre-market.
+    if market_state == "PRE":
+        prev_close = q.get("regularMarketPrice") or q.get("regularMarketPreviousClose")
+    else:
+        prev_close = q.get("regularMarketPreviousClose")
     avg_vol_10d = q.get("averageDailyVolume10Day")
 
     # During pre-market, regularMarket* fields are stale (previous session).
@@ -234,6 +243,11 @@ class MarketDataSource:
         self._cache: dict[str, tuple[list[ScannerResultItem], datetime]] = {}
         self._cache_ttl = timedelta(seconds=cache_ttl_seconds)
         self._news_cache: dict[str, tuple[dict[str, bool], datetime]] = {}
+        # floatShares changes infrequently (offerings, lockup expiry, buybacks)
+        # so cache aggressively. Yahoo screener doesn't return floatShares —
+        # only sharesOutstanding — so we fetch per-ticker via Ticker.info.
+        self._float_cache: dict[str, tuple[Optional[int], datetime]] = {}
+        self._float_cache_ttl = timedelta(hours=24)
 
     def _is_cache_valid(self, key: str) -> bool:
         if key not in self._cache:
@@ -393,6 +407,44 @@ class MarketDataSource:
             except Exception:
                 result[sym] = False
         return result
+
+    def _fetch_floats_sync(self, symbols: list[str]) -> dict[str, Optional[int]]:
+        """Resolve real floatShares per symbol with 24h caching. Falls back
+        to sharesOutstanding when floatShares is missing."""
+        result: dict[str, Optional[int]] = {}
+        to_fetch: list[str] = []
+        now = datetime.now()
+        for sym in symbols:
+            cached = self._float_cache.get(sym)
+            if cached is not None and now < cached[1] + self._float_cache_ttl:
+                result[sym] = cached[0]
+            else:
+                to_fetch.append(sym)
+        for sym in to_fetch:
+            value: Optional[int] = None
+            try:
+                info = yf.Ticker(sym).info or {}
+                raw = info.get("floatShares") or info.get("sharesOutstanding")
+                if raw:
+                    value = int(raw)
+            except Exception as exc:
+                logger.warning("Float fetch failed for %s: %s", sym, exc)
+            self._float_cache[sym] = (value, now)
+            result[sym] = value
+        return result
+
+    async def enrich_floats(self, items: list[ScannerResultItem]) -> None:
+        """Overwrite item.float_shares with Yahoo's real floatShares (cached).
+        No-op when items is empty."""
+        if not items:
+            return
+        symbols = [item.symbol for item in items]
+        loop = asyncio.get_event_loop()
+        floats = await loop.run_in_executor(None, self._fetch_floats_sync, symbols)
+        for item in items:
+            real_float = floats.get(item.symbol)
+            if real_float is not None:
+                item.float_shares = real_float
 
     async def check_news(self, symbols: list[str], hours: int = 24) -> dict[str, bool]:
         """Async wrapper for news check. Cached for 5 minutes."""
